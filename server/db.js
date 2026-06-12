@@ -1,0 +1,184 @@
+const Database = require('better-sqlite3');
+const path = require('path');
+const bcrypt = require('bcryptjs');
+
+const DB_PATH = path.join(__dirname, 'data.db');
+const db = new Database(DB_PATH);
+
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS admin (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS guests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nickname TEXT NOT NULL,
+    real_name TEXT,
+    gender TEXT NOT NULL CHECK(gender IN ('男','女')),
+    birth_year INTEGER,
+    district TEXT,
+    occupation TEXT,
+    circle TEXT,
+    education TEXT,
+    marital TEXT,
+    height INTEGER,
+    contact TEXT,
+    audit_status TEXT NOT NULL DEFAULT '待审' CHECK(audit_status IN ('待审','通过','拒绝','待补')),
+    audit_flags TEXT DEFAULT '{}',
+    preferences TEXT,
+    notes TEXT,
+    -- 扩展信息
+    self_intro TEXT,
+    interests TEXT,
+    income TEXT,
+    -- 择偶条件（结构化）
+    pref_age_min INTEGER,
+    pref_age_max INTEGER,
+    pref_height_min INTEGER,
+    pref_height_max INTEGER,
+    pref_education TEXT,
+    pref_income TEXT,
+    pref_circle TEXT,
+    pref_district TEXT,
+    pref_marital TEXT,
+    blacklisted INTEGER NOT NULL DEFAULT 0,
+    blacklist_reason TEXT,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    circle_type TEXT,
+    date_time TEXT,
+    location TEXT,
+    quota_male INTEGER NOT NULL DEFAULT 0,
+    quota_female INTEGER NOT NULL DEFAULT 0,
+    price_male REAL NOT NULL DEFAULT 0,
+    price_female REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT '筹备' CHECK(status IN ('筹备','报名中','进行中','已结束','取消')),
+    notes TEXT,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS registrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id),
+    guest_id INTEGER NOT NULL REFERENCES guests(id),
+    sign_up_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    source TEXT,
+    audit_status TEXT NOT NULL DEFAULT '待审' CHECK(audit_status IN ('待审','通过','拒绝')),
+    paid INTEGER NOT NULL DEFAULT 0,
+    attended INTEGER NOT NULL DEFAULT 0,
+    matched_with INTEGER REFERENCES guests(id),
+    notes TEXT,
+    UNIQUE(event_id, guest_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL UNIQUE REFERENCES events(id),
+    registered INTEGER DEFAULT 0,
+    attended INTEGER DEFAULT 0,
+    male_attended INTEGER DEFAULT 0,
+    female_attended INTEGER DEFAULT 0,
+    matches INTEGER DEFAULT 0,
+    revenue_male REAL DEFAULT 0,
+    revenue_female REAL DEFAULT 0,
+    revenue_other REAL DEFAULT 0,
+    cost REAL DEFAULT 0,
+    acquisition_cost REAL DEFAULT 0,
+    satisfaction REAL,
+    went_well TEXT,
+    improve TEXT,
+    actions TEXT,
+    cases TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+// Migrations: add new columns if they don't exist
+const guestCols = db.prepare("PRAGMA table_info(guests)").all().map(c => c.name);
+const newGuestCols = [
+  ['self_intro', 'TEXT'],
+  ['interests', 'TEXT'],
+  ['income', 'TEXT'],
+  ['pref_age_min', 'INTEGER'],
+  ['pref_age_max', 'INTEGER'],
+  ['pref_height_min', 'INTEGER'],
+  ['pref_height_max', 'INTEGER'],
+  ['pref_education', 'TEXT'],
+  ['pref_income', 'TEXT'],
+  ['pref_circle', 'TEXT'],
+  ['pref_district', 'TEXT'],
+  ['pref_marital', 'TEXT'],
+  // 参考嘉宾资料卡模板补充
+  ['phone', 'TEXT'],
+  ['hometown', 'TEXT'],
+  ['body_type', 'TEXT'],
+  ['housing', 'TEXT'],
+  ['car', 'TEXT'],
+  ['one_liner', 'TEXT'],
+  ['accept_long_distance', 'TEXT'],
+  ['accept_children', 'TEXT'],
+  ['single_promise', 'INTEGER'],
+  ['display_consent', 'INTEGER'],
+  // 参考运营方案审核标准与合规三件套补充
+  ['id_last4', 'TEXT'],
+  ['credentials', 'TEXT'],
+  ['agree_disclaimer', 'INTEGER'],
+  ['portrait_consent', 'INTEGER'],
+  ['source_channel', 'TEXT'],
+  ['interested_events', 'TEXT'],
+  // 命理模块：完整出生日期与时辰
+  ['birth_date', 'TEXT'],
+  ['birth_time', 'TEXT'],
+  // 审核闭环：审核意见与时间
+  ['audit_reason', 'TEXT'],
+  ['audited_at', 'TEXT'],
+  // 参考小程序资料模型扩充
+  ['work_type', 'TEXT'],
+  ['school', 'TEXT'],
+  ['mbti', 'TEXT'],
+  ['intention', 'TEXT'],
+  ['relationship_value', 'TEXT'],
+  ['lifestyle_desc', 'TEXT'],
+  ['family_plan', 'TEXT'],
+  ['preferred_date', 'TEXT'],
+  ['dealbreakers', 'TEXT'],
+  ['personality_tags', 'TEXT'],
+  ['sport_tags', 'TEXT'],
+  ['lifestyle_tags', 'TEXT'],
+  ['value_tags', 'TEXT'],
+  ['qa_answers', 'TEXT'],
+  ['same_city_only', 'TEXT'],
+  // 八字精准化：出生地（真太阳时参考）
+  ['birth_place', 'TEXT'],
+  // 红娘自定义标签（管理后台打标）
+  ['admin_tags', 'TEXT'],
+];
+for (const [col, type] of newGuestCols) {
+  if (!guestCols.includes(col)) {
+    db.exec(`ALTER TABLE guests ADD COLUMN ${col} ${type}`);
+  }
+}
+
+// Seed admin user if not exists
+const existing = db.prepare('SELECT id FROM admin WHERE username = ?').get(process.env.ADMIN_USERNAME || 'admin');
+if (!existing) {
+  const hash = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'Admin@2024!', 10);
+  db.prepare('INSERT INTO admin (username, password_hash) VALUES (?, ?)').run(
+    process.env.ADMIN_USERNAME || 'admin',
+    hash
+  );
+}
+
+module.exports = db;
