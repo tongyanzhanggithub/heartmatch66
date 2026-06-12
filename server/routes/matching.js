@@ -40,10 +40,14 @@ function dimHeight(seeker, candidate) {
 function dimCircle(seeker, candidate) {
   if (!seeker.pref_circle) return null;
   if (!candidate.circle) return { skipped: '对方圈层未填' };
-  if (candidate.circle === seeker.pref_circle || candidate.circle.includes(seeker.pref_circle) || seeker.pref_circle.includes(candidate.circle)) {
-    return { score: 100, note: `${candidate.circle}，符合期望圈层` };
+  // 圈层支持多值（CSV）：任一期望圈层与对方任一圈层匹配即视为符合
+  const prefs = seeker.pref_circle.split(',').filter(Boolean);
+  const circles = candidate.circle.split(',').filter(Boolean);
+  const hit = prefs.some(p => circles.some(c => c === p || c.includes(p) || p.includes(c)));
+  if (hit) {
+    return { score: 100, note: `${circles.join('/')}，符合期望圈层` };
   }
-  return { score: 20, note: `期望${seeker.pref_circle}，对方是${candidate.circle}` };
+  return { score: 20, note: `期望${prefs.join('/')}，对方是${circles.join('/')}` };
 }
 
 function dimEducation(seeker, candidate) {

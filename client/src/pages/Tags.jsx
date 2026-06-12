@@ -31,13 +31,10 @@ function TagAssignModal({ guests, presetTag, mode = 'admin', onClose }) {
     try {
       for (const id of selected) {
         const g = guests.find(x => x.id === id);
-        if (mode === 'circle') {
-          await api.put(`/guests/${id}`, { circle: tag });
-        } else {
-          const tags = (g.admin_tags || '').split(',').filter(Boolean);
-          if (!tags.includes(tag)) {
-            await api.put(`/guests/${id}`, { admin_tags: [...tags, tag].join(',') });
-          }
+        const field = mode === 'circle' ? 'circle' : 'admin_tags';
+        const tags = (g[field] || '').split(',').filter(Boolean);
+        if (!tags.includes(tag)) {
+          await api.put(`/guests/${id}`, { [field]: [...tags, tag].join(',') });
         }
       }
       onClose(true);
@@ -69,8 +66,8 @@ function TagAssignModal({ guests, presetTag, mode = 'admin', onClose }) {
             </div>
           )}
           {mode === 'circle' && (
-            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-              ⚠️ 圈层是单选属性：划入新圈层会替换嘉宾原来的圈层（列表中会显示其当前圈层）
+            <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
+              一人可同时属于多个圈层（如「教师」+「高知硕博」），划入为追加，不影响已有圈层
             </p>
           )}
           <div className="relative">
@@ -84,9 +81,8 @@ function TagAssignModal({ guests, presetTag, mode = 'admin', onClose }) {
           {filtered.map(g => {
             const age = g.birth_year ? new Date().getFullYear() - g.birth_year : null;
             const checked = selected.has(g.id);
-            const alreadyHas = tagName.trim() && (mode === 'circle'
-              ? g.circle === tagName.trim()
-              : (g.admin_tags || '').split(',').includes(tagName.trim()));
+            const alreadyHas = tagName.trim() &&
+              ((mode === 'circle' ? g.circle : g.admin_tags) || '').split(',').includes(tagName.trim());
             return (
               <label key={g.id} className={`flex items-center gap-3 py-2.5 cursor-pointer ${alreadyHas ? 'opacity-40' : ''}`}>
                 <input type="checkbox" checked={checked} disabled={alreadyHas}
@@ -99,7 +95,7 @@ function TagAssignModal({ guests, presetTag, mode = 'admin', onClose }) {
                     {g.nickname} {alreadyHas && <span className="text-xs text-gray-400">（{mode === 'circle' ? '已在此圈层' : '已有此标签'}）</span>}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {age ? `${age}岁` : ''} {mode === 'circle' && g.circle ? `当前圈层：${g.circle}` : g.circle || ''} {g.occupation || ''}
+                    {age ? `${age}岁` : ''} {mode === 'circle' && g.circle ? `已属：${g.circle.split(',').join('、')}` : g.circle?.split(',').join('、') || ''} {g.occupation || ''}
                   </p>
                 </div>
               </label>
@@ -136,9 +132,7 @@ export default function Tags() {
   const tagMap = useMemo(() => {
     const map = {};
     for (const g of guests) {
-      const tags = tagType === 'admin'
-        ? (g.admin_tags || '').split(',').filter(Boolean)
-        : (g.circle ? [g.circle] : []);
+      const tags = ((tagType === 'admin' ? g.admin_tags : g.circle) || '').split(',').filter(Boolean);
       for (const t of tags) (map[t] = map[t] || []).push(g);
     }
     return map;
@@ -148,14 +142,11 @@ export default function Tags() {
   const shown = activeTag ? (tagMap[activeTag] || []) : [];
 
   async function removeFromTag(g) {
-    if (tagType === 'circle') {
-      if (!confirm(`把「${g.nickname}」移出圈层「${activeTag}」？（其圈层将清空，可稍后重新划入）`)) return;
-      await api.put(`/guests/${g.id}`, { circle: '' });
-    } else {
-      if (!confirm(`把「${g.nickname}」从标签「${activeTag}」中移出？`)) return;
-      const tags = (g.admin_tags || '').split(',').filter(Boolean).filter(t => t !== activeTag);
-      await api.put(`/guests/${g.id}`, { admin_tags: tags.join(',') });
-    }
+    const label = tagType === 'circle' ? '圈层' : '标签';
+    if (!confirm(`把「${g.nickname}」从${label}「${activeTag}」中移出？`)) return;
+    const field = tagType === 'circle' ? 'circle' : 'admin_tags';
+    const tags = (g[field] || '').split(',').filter(Boolean).filter(t => t !== activeTag);
+    await api.put(`/guests/${g.id}`, { [field]: tags.join(',') });
     load();
   }
 

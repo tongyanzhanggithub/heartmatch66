@@ -210,7 +210,7 @@ export default function Guests() {
                     <>
                       <td className="px-4 py-3 text-sm text-gray-600">{g.gender}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">{age ? `${age}岁` : '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{g.circle || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{g.circle ? g.circle.split(',').join('、') : '-'}</td>
                       <td className="px-4 py-3 text-sm text-red-600">{g.blacklist_reason || '-'}</td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <button className="btn-secondary btn-sm" onClick={() => unblacklist(g)}>
@@ -221,7 +221,7 @@ export default function Guests() {
                   ) : (
                     <>
                       <td className="px-4 py-3 text-sm text-gray-500">{age ? `${age}岁` : '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{g.circle || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{g.circle ? g.circle.split(',').join('、') : '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">{g.occupation || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">{g.education || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">{g.height ? `${g.height}cm` : '-'}</td>

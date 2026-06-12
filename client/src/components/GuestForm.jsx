@@ -112,11 +112,12 @@ export default function GuestForm({ guest, onClose }) {
                 <input className="input" value={form.occupation} onChange={e => set('occupation', e.target.value)} />
               </div>
               <div>
-                <label className="label">圈层</label>
-                <select className="input" value={form.circle} onChange={e => set('circle', e.target.value)}>
-                  <option value="">请选择</option>
-                  {CIRCLES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <label className="label">圈层（可多个，逗号分隔）</label>
+                <input className="input" value={form.circle} onChange={e => set('circle', e.target.value)}
+                  placeholder="如：教师,高知硕博" list="circle-options" />
+                <datalist id="circle-options">
+                  {CIRCLES.map(c => <option key={c} value={c} />)}
+                </datalist>
               </div>
               <div>
                 <label className="label">学历</label>
@@ -183,11 +184,9 @@ export default function GuestForm({ guest, onClose }) {
                 </div>
               </div>
               <div>
-                <label className="label">期望圈层</label>
-                <select className="input" value={form.pref_circle} onChange={e => set('pref_circle', e.target.value)}>
-                  <option value="">不限</option>
-                  {CIRCLES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <label className="label">期望圈层（可多个，逗号分隔）</label>
+                <input className="input" value={form.pref_circle} onChange={e => set('pref_circle', e.target.value)}
+                  placeholder="不限则留空" list="circle-options" />
               </div>
               <div>
                 <label className="label">期望学历（最低）</label>

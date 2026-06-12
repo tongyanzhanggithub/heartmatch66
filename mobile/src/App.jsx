@@ -276,7 +276,7 @@ function Step2({ form, set }) {
         <ChipGroup options={WORK_TYPES} value={form.work_type} onChange={v => set('work_type', v)} />
       </Field>
       <Field label="所属圈层">
-        <ChipGroup options={CIRCLES} value={form.circle} onChange={v => set('circle', v)} />
+        <MultiChipGroup options={CIRCLES} value={form.circle} onChange={v => set('circle', v)} />
       </Field>
       <Field label="最高学历" required>
         <ChipGroup allowCustom={false} options={EDUCATIONS} value={form.education} onChange={v => set('education', v)} />
@@ -388,7 +388,7 @@ function Step4({ form, set }) {
       </Field>
 
       <Field label="期望对方圈层">
-        <ChipGroup options={CIRCLES} value={form.pref_circle} onChange={v => set('pref_circle', v)} />
+        <MultiChipGroup options={CIRCLES} value={form.pref_circle} onChange={v => set('pref_circle', v)} />
       </Field>
 
       <Field label="期望对方学历（最低）">

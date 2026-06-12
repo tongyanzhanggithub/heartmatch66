@@ -196,7 +196,7 @@ export default function GuestDetail() {
           <Field label="年龄" value={age ? `${age}岁（${guest.birth_year}年）` : null} />
           <Field label="所在区" value={guest.district} />
           <Field label="职业" value={guest.occupation} />
-          <Field label="圈层" value={guest.circle} />
+          <Field label="圈层" value={guest.circle?.split(',').join('、')} />
           <Field label="学历" value={guest.education} />
           <Field label="婚况" value={guest.marital} />
           <Field label="身高" value={guest.height ? `${guest.height}cm` : null} />
