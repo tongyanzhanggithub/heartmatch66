@@ -288,21 +288,53 @@ export function generateHepanCard(report) {
     ctx.fillText(kw, W / 2, 800);
   }
 
-  // 维度摘要
-  ctx.font = `26px ${FONT}`;
+  // 维度摘要：固定两列对齐（左列标题、右列分数），中间点线引导
+  const secs = report.sections.slice(0, 4);
+  const rowH = 52;
   let y = 880;
-  for (const s of report.sections.slice(0, 4)) {
-    const sign = s.score_delta > 0 ? '+' : '';
-    ctx.fillStyle = '#6b7280';
-    ctx.textAlign = 'right';
-    ctx.fillText(s.title, W / 2 - 20, y);
+  const colL = 175, colR = W - 175;
+  for (let i = 0; i < secs.length; i++) {
+    const s = secs[i];
+    const rowY = y + i * rowH;
+
+    // 行间淡分隔线
+    if (i > 0) {
+      ctx.strokeStyle = 'rgba(168,85,247,0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(colL, rowY - rowH / 2 - 9);
+      ctx.lineTo(colR, rowY - rowH / 2 - 9);
+      ctx.stroke();
+    }
+
+    // 左列：标题
     ctx.textAlign = 'left';
-    ctx.fillStyle = s.score_delta >= 0 ? '#16a34a' : '#dc2626';
-    ctx.font = `bold 26px ${FONT}`;
-    ctx.fillText(`${sign}${s.score_delta} 分`, W / 2 + 20, y);
+    ctx.fillStyle = '#6b7280';
     ctx.font = `26px ${FONT}`;
-    y += 46;
+    ctx.fillText(s.title, colL, rowY);
+
+    // 右列：分数（右对齐）
+    ctx.textAlign = 'right';
+    ctx.fillStyle = s.score_delta >= 0 ? '#16a34a' : '#dc2626';
+    ctx.font = `bold 27px ${FONT}`;
+    const sign = s.score_delta > 0 ? '+' : '';
+    ctx.fillText(`${sign}${s.score_delta} 分`, colR, rowY);
+
+    // 中间点线引导（从标题尾到分数头）
+    ctx.font = `26px ${FONT}`;
+    ctx.textAlign = 'left';
+    const titleW = ctx.measureText(s.title).width;
+    ctx.font = `bold 27px ${FONT}`;
+    const scoreW = ctx.measureText(`${sign}${s.score_delta} 分`).width;
+    ctx.strokeStyle = 'rgba(156,163,175,0.4)';
+    ctx.setLineDash([2, 6]);
+    ctx.beginPath();
+    ctx.moveTo(colL + titleW + 18, rowY - 8);
+    ctx.lineTo(colR - scoreW - 18, rowY - 8);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
+  ctx.textAlign = 'center';
 
   // 底部
   ctx.textAlign = 'center';
