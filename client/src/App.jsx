@@ -11,6 +11,7 @@ import Matching from './pages/Matching';
 import Hepan from './pages/Hepan';
 import Audit from './pages/Audit';
 import Tags from './pages/Tags';
+import OpLogs from './pages/OpLogs';
 
 function PrivateRoute({ children }) {
   return localStorage.getItem('token') ? children : <Navigate to="/login" replace />;
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="hepan" element={<Hepan />} />
           <Route path="audit" element={<Audit />} />
           <Route path="tags" element={<Tags />} />
+          <Route path="oplogs" element={<OpLogs />} />
         </Route>
       </Routes>
     </BrowserRouter>

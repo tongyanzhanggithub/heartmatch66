@@ -23,15 +23,17 @@ app.use('/api/public', publicRoutes);
 // Auth
 app.use('/api/auth', authRoutes);
 
-// Protected routes
-app.use('/api/guests', auth, guestRoutes);
-app.use('/api/events', auth, eventRoutes);
-app.use('/api/registrations', auth, regRoutes);
-app.use('/api/reviews', auth, reviewRoutes);
+// Protected routes（oplog 自动记录写操作，供主账号审计）
+const { oplog } = require('./middleware/oplog');
+app.use('/api/guests', auth, oplog, guestRoutes);
+app.use('/api/events', auth, oplog, eventRoutes);
+app.use('/api/registrations', auth, oplog, regRoutes);
+app.use('/api/reviews', auth, oplog, reviewRoutes);
 app.use('/api/dashboard', auth, dashboardRoutes);
 app.use('/api/matching', auth, matchingRoutes);
-app.use('/api/guests-io', auth, require('./routes/importExport'));
+app.use('/api/guests-io', auth, oplog, require('./routes/importExport'));
 app.use('/api/fortune', auth, require('./routes/fortune'));
+app.use('/api/oplogs', auth, require('./routes/oplogs'));
 
 // Serve frontends in production
 // 注意：Express 5 不再支持 app.get('*') 通配符，改用兜底中间件实现 SPA fallback

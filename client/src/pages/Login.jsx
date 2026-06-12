@@ -16,6 +16,7 @@ export default function Login() {
     try {
       const { data } = await api.post('/auth/login', form);
       localStorage.setItem('token', data.token);
+      localStorage.setItem('username', data.username);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || '登录失败');

@@ -25,6 +25,11 @@ router.post('/login', (req, res) => {
   }
   failures.delete(username);
 
+  // 记录登录日志（主账号审计用）
+  try {
+    require('../middleware/oplog').writeLog(admin.username, '登录系统', null, 'POST', '/api/auth/login');
+  } catch { /* 不影响登录 */ }
+
   const token = jwt.sign({ id: admin.id, username: admin.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
   res.json({ token, username: admin.username });
 });

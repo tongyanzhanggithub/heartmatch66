@@ -82,6 +82,16 @@ db.exec(`
     UNIQUE(event_id, guest_id)
   );
 
+  CREATE TABLE IF NOT EXISTS op_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    action TEXT NOT NULL,
+    detail TEXT,
+    method TEXT,
+    path TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
   CREATE TABLE IF NOT EXISTS reviews (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id INTEGER NOT NULL UNIQUE REFERENCES events(id),

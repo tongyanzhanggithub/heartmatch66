@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCheck, CalendarDays, LogOut, Heart, Sparkles, Tag } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, CalendarDays, LogOut, Heart, Sparkles, Tag, ScrollText } from 'lucide-react';
 import api from '../api';
 
 const nav = [
@@ -11,6 +11,7 @@ const nav = [
   { to: '/events', icon: CalendarDays, label: '活动管理' },
   { to: '/guests', icon: Sparkles, label: 'AI 智能匹配', sub: '在嘉宾列表点击匹配', dim: true },
   { to: '/hepan', icon: Heart, label: '八字合盘', sub: '缘分测算 · 星座契合' },
+  { to: '/oplogs', icon: ScrollText, label: '操作记录', sub: '账号操作审计', adminOnly: true },
 ];
 
 export default function Layout() {
@@ -33,6 +34,7 @@ export default function Layout() {
 
   function logout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('username');
     navigate('/login');
   }
 
@@ -45,7 +47,8 @@ export default function Layout() {
           <span className="font-bold text-gray-800 text-base leading-tight">相亲活动<br/>管理后台</span>
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1">
-          {nav.map(({ to, icon: Icon, label, sub, badge, dim }) => (
+          {nav.filter(item => !item.adminOnly || localStorage.getItem('username') === 'admin')
+            .map(({ to, icon: Icon, label, sub, badge, dim }) => (
             <NavLink
               key={label} to={to}
               className={({ isActive }) =>
