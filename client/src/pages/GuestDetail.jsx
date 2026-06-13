@@ -226,6 +226,12 @@ export default function GuestDetail() {
         </div>
       )}
 
+      {guest.join_purpose === '活动' && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-700 text-sm">
+          🎉 该用户报名「只参加活动」，不参与相亲匹配与牵线
+        </div>
+      )}
+
       {(() => {
         let photos = [];
         try { photos = guest.photos ? JSON.parse(guest.photos) : []; } catch { /* 忽略脏数据 */ }
@@ -251,6 +257,7 @@ export default function GuestDetail() {
         </div>
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <Field label="性别" value={guest.gender} />
+          <Field label="参与目的" value={guest.join_purpose} />
           <Field label="年龄" value={age ? `${age}岁（${guest.birth_year}年）` : null} />
           <Field label="所在区" value={guest.district} />
           <Field label="职业" value={guest.occupation} />

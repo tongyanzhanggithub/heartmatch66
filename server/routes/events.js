@@ -55,7 +55,8 @@ router.get('/:id/recommend', (req, res) => {
   const registeredIds = db.prepare('SELECT guest_id FROM registrations WHERE event_id = ?')
     .all(event.id).map(r => r.guest_id);
 
-  let sql = "SELECT * FROM guests WHERE deleted = 0 AND audit_status = '通过' AND blacklisted = 0";
+  // 智能荐人基于匹配分，排除「只参加活动」人群（如需邀请他们参加活动，用「添加报名」手动加）
+  let sql = "SELECT * FROM guests WHERE deleted = 0 AND audit_status = '通过' AND blacklisted = 0 AND (join_purpose IS NULL OR join_purpose != '活动')";
   const params = [];
   if (gender) { sql += ' AND gender = ?'; params.push(gender); }
   if (registeredIds.length) sql += ` AND id NOT IN (${registeredIds.map(() => '?').join(',')})`;

@@ -46,6 +46,7 @@ const FIELD_MAP = [
   ['价值观标签', 'value_tags'],
   ['快问快答', 'qa_answers'],
   ['依恋类型', 'attachment_style'],
+  ['参与目的', 'join_purpose'],
   ['期望年龄最小', 'pref_age_min'],
   ['期望年龄最大', 'pref_age_max'],
   ['期望身高最低', 'pref_height_min'],

@@ -60,9 +60,21 @@ function computeAttachment(ans) {
 
 const zodiacOf = y => ZODIACS[(y - 4) % 12];
 
-const STEPS = ['基本信息', '职业与条件', '性格与生活', '介绍自己', '择偶要求', '承诺与联系'];
+// 参与目的：报名第一步选择，决定后续表单深度
+const PURPOSES = [
+  { key: '相亲', icon: '💞', title: '认真相亲', desc: '想找对象，认真了解彼此' },
+  { key: '交友', icon: '🤝', title: '单身交友', desc: '单身，先交朋友（也愿意被红娘推荐）' },
+  { key: '活动', icon: '🎉', title: '只参加活动', desc: '想参加社交/娱乐活动（已婚·有伴也欢迎）' },
+];
+const STEPS_BY_PURPOSE = {
+  '相亲': ['基本信息', '职业与条件', '性格与生活', '介绍自己', '择偶要求', '承诺与联系'],
+  '交友': ['基本信息', '职业与条件', '性格与生活', '介绍自己', '择偶要求', '承诺与联系'],
+  '活动': ['活动报名'],
+};
+const ACTIVITY_MARITALS = ['未婚', '离异', '丧偶', '已婚', '有伴侣'];
 
 const BLANK = {
+  join_purpose:'',
   nickname:'', real_name:'', gender:'女',
   birth_year:'', birth_date:'', birth_time:'', district:'', hometown:'',
   occupation:'', circle:'', education:'', marital:'未婚',
@@ -656,6 +668,89 @@ function SuccessScreen() {
   );
 }
 
+// ─── 参与目的选择（报名第一步）──────────────────────────────
+function PurposeGate({ onPick }) {
+  return (
+    <div className="min-h-screen bg-cream flex flex-col">
+      <div className="px-5 pt-10 pb-2">
+        <div className="flex items-center gap-2 mb-1">
+          <img src="/apply/favicon.svg" alt="半日相知" className="w-8 h-8 rounded-lg" />
+          <h1 className="text-xl font-bold text-gray-800 tracking-wider">半日相知</h1>
+        </div>
+        <p className="text-sm text-gray-400">用半日时间，遇见真正聊得来的人</p>
+      </div>
+      <div className="px-5 pt-6 space-y-3">
+        <p className="text-base font-semibold text-gray-700">你想以什么方式加入？</p>
+        <p className="text-xs text-gray-400 -mt-1 mb-2">选哪个就只问对应的内容，不浪费你的时间</p>
+        {PURPOSES.map(p => (
+          <button key={p.key} type="button" onClick={() => onPick(p.key)}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 bg-white text-left active:scale-95 transition-transform">
+            <span className="text-3xl shrink-0">{p.icon}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-800">{p.title}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{p.desc}</p>
+            </div>
+            <span className="text-gray-300 text-xl shrink-0">→</span>
+          </button>
+        ))}
+      </div>
+      <p className="px-5 mt-6 text-xs text-gray-300 leading-relaxed">🔒 内部邀请制报名，资料仅用于活动审核与匹配，严格保密。</p>
+    </div>
+  );
+}
+
+// ─── 只参加活动：极简单页表单 ───────────────────────────────
+function ActivityForm({ form, set }) {
+  const year = new Date().getFullYear();
+  return (
+    <>
+      <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+        🎉 只参加活动通道：仅收集基础信息，不涉及相亲匹配，已婚 · 有伴也欢迎～
+      </div>
+      <Field label="性别" required><GenderToggle value={form.gender} onChange={v => set('gender', v)} /></Field>
+      <Field label="昵称" required>
+        <Input placeholder="怎么称呼你～" value={form.nickname} onChange={e => set('nickname', e.target.value)} />
+      </Field>
+      <Field label="出生日期" required hint={form.birth_date ? `${year - +form.birth_date.slice(0, 4)}岁` : '用于活动年龄分组'}>
+        <Input type="date" min={`${year - 70}-01-01`} max={`${year - 18}-12-31`} value={form.birth_date}
+          onChange={e => { set('birth_date', e.target.value); set('birth_year', e.target.value ? e.target.value.slice(0, 4) : ''); }} />
+      </Field>
+      <Field label="目前所在区域" required>
+        <Select value={form.district} onChange={e => set('district', e.target.value)}>
+          <option value="">请选择</option>
+          {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+        </Select>
+      </Field>
+      <Field label="婚况">
+        <ChipGroup allowCustom={false} options={ACTIVITY_MARITALS} value={form.marital} onChange={v => set('marital', v)} />
+      </Field>
+      <Field label="兴趣爱好" hint="方便活动分组、找到同好">
+        <Input placeholder="如：徒步、桌游、美食、摄影、运动..." value={form.interests} onChange={e => set('interests', e.target.value)} />
+      </Field>
+      <Field label="想参加的活动类型（可多选）">
+        <MultiChipGroup options={EVENT_TYPES} value={form.interested_events} onChange={v => set('interested_events', v)} />
+      </Field>
+      <Field label="微信号" required hint="仅供工作人员通知活动，不对外公开">
+        <Input placeholder="填写你的微信号" value={form.contact} onChange={e => set('contact', e.target.value)} />
+      </Field>
+      <Field label="手机号" hint="选填">
+        <Input type="tel" maxLength={11} placeholder="选填" value={form.phone} onChange={e => set('phone', e.target.value)} />
+      </Field>
+      <Field label="你从哪里得知我们？">
+        <ChipGroup options={SOURCES} value={form.source_channel} onChange={v => set('source_channel', v)} />
+      </Field>
+      <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.agree_disclaimer ? 'border-primary-400 bg-primary-50' : 'border-gray-200 bg-white'}`}>
+        <input type="checkbox" checked={form.agree_disclaimer}
+          onChange={e => set('agree_disclaimer', e.target.checked)} className="mt-0.5 w-5 h-5 accent-primary-500 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-gray-800">文明社交承诺 & 活动免责协议 <span className="text-primary-500">*</span></p>
+          <p className="text-xs text-gray-500 mt-1">本人承诺所填信息真实，参加活动文明社交、尊重他人；知悉主办方仅提供活动组织服务；活动外或私下交往的纠纷由当事人自行承担；警惕诈骗，不向他人转账借款。</p>
+        </div>
+      </label>
+    </>
+  );
+}
+
 // ─── Main App ────────────────────────────────────────────────
 export default function App() {
   const [step, setStep] = useState(() => loadDraft()?.step || 0);
@@ -670,6 +765,9 @@ export default function App() {
   const [applyEvent, setApplyEvent] = useState(null); // 扫码进入时的目标活动
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  const purpose = form.join_purpose;
+  const STEPS = STEPS_BY_PURPOSE[purpose] || STEPS_BY_PURPOSE['相亲'];
 
   useEffect(() => {
     const eventId = new URLSearchParams(window.location.search).get('event');
@@ -695,17 +793,29 @@ export default function App() {
   }
 
   function validate() {
-    if (step === 0) {
+    // 只参加活动：极简单页，免单身承诺
+    if (purpose === '活动') {
+      if (!form.nickname.trim()) return '请填写昵称';
+      if (!form.birth_date) return '请选择出生日期';
+      if (!form.district) return '请选择所在区域';
+      if (!form.contact.trim()) return '请填写微信号';
+      if (form.phone && !/^1\d{10}$/.test(form.phone)) return '手机号格式不正确';
+      if (!form.agree_disclaimer) return '请勾选文明社交承诺与免责协议';
+      return '';
+    }
+    // 相亲 / 交友：按当前步骤名校验
+    const stepName = STEPS[step];
+    if (stepName === '基本信息') {
       if (!form.nickname.trim()) return '请填写昵称';
       if (!form.birth_date) return '请选择出生日期';
       if (!form.district) return '请选择所在区域';
       if (!form.height) return '请填写身高';
     }
-    if (step === 1) {
+    if (stepName === '职业与条件') {
       if (!form.occupation.trim()) return '请填写职业';
       if (!form.education) return '请选择学历';
     }
-    if (step === 5) {
+    if (stepName === '承诺与联系') {
       if (!form.contact.trim()) return '请填写微信号';
       if (form.phone && !/^1\d{10}$/.test(form.phone)) return '手机号格式不正确';
       if (form.id_last4 && form.id_last4.length !== 4) return '身份证后四位需填写4位';
@@ -738,22 +848,21 @@ export default function App() {
   }
 
   if (done) return <SuccessScreen />;
+  if (!purpose) return <PurposeGate onPick={p => { set('join_purpose', p); setStep(0); setError(''); }} />;
 
   const pct = Math.round(((step + 1) / STEPS.length) * 100);
-  // 性格/介绍/择偶步骤可跳过；基本信息、职业、承诺步骤含必填项
-  const canSkip = step === 2 || step === 3 || step === 4;
+  // 性格/介绍/择偶步骤可跳过（仅相亲/交友流程）
+  const canSkip = purpose !== '活动' && (step === 2 || step === 3 || step === 4);
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
       {/* Header */}
       <div className="bg-white sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3 px-4 py-3">
-          {step > 0 && (
-            <button onClick={() => { setStep(s => s - 1); setError(''); }}
-              className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-lg">
-              ←
-            </button>
-          )}
+          <button onClick={() => { if (step > 0) setStep(s => s - 1); else set('join_purpose', ''); setError(''); }}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-lg">
+            ←
+          </button>
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-semibold text-gray-700">{STEPS[step]}</span>
@@ -775,7 +884,7 @@ export default function App() {
 
       {/* Title */}
       <div className="px-5 pt-6 pb-2">
-        {step === 0 && (
+        {step === 0 && purpose !== '活动' && (
           <div className="mb-4 px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-xs text-gray-500 leading-relaxed">
             🔒 本页面为<strong className="text-gray-700">内部邀请制报名通道</strong>，仅限受邀嘉宾填写，谢绝公开传播。
             所填资料仅用于活动审核与匹配，严格保密。
@@ -787,7 +896,9 @@ export default function App() {
         </div>
         <p className="text-xs text-gray-400 mb-1">用半日时间，遇见真正聊得来的人</p>
         <p className="text-sm text-gray-400">
-          {['填写您的基本信息', '职业背景与个人条件', '您的性格与生活方式', '让对方先了解您', '您期望的另一半是什么样的', '承诺声明与联系方式'][step]}
+          {purpose === '活动'
+            ? '只需基础信息，30 秒搞定～'
+            : ['填写您的基本信息', '职业背景与个人条件', '您的性格与生活方式', '让对方先了解您', '您期望的另一半是什么样的', '承诺声明与联系方式'][step]}
         </p>
       </div>
 
@@ -800,12 +911,18 @@ export default function App() {
             <button type="button" onClick={() => setDraftRestored(false)} className="text-primary-300 text-base leading-none shrink-0">×</button>
           </div>
         )}
-        {step === 0 && <Step1 form={form} set={set} />}
-        {step === 1 && <Step2 form={form} set={set} />}
-        {step === 2 && <StepPersonality form={form} set={set} />}
-        {step === 3 && <Step3 form={form} set={set} />}
-        {step === 4 && <Step4 form={form} set={set} />}
-        {step === 5 && <Step5 form={form} set={set} />}
+        {purpose === '活动' ? (
+          <ActivityForm form={form} set={set} />
+        ) : (
+          <>
+            {step === 0 && <Step1 form={form} set={set} />}
+            {step === 1 && <Step2 form={form} set={set} />}
+            {step === 2 && <StepPersonality form={form} set={set} />}
+            {step === 3 && <Step3 form={form} set={set} />}
+            {step === 4 && <Step4 form={form} set={set} />}
+            {step === 5 && <Step5 form={form} set={set} />}
+          </>
+        )}
       </div>
 
       {/* Bottom action */}

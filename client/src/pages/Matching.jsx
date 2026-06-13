@@ -168,6 +168,21 @@ export default function Matching() {
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">双向匹配分析中...</div>;
   if (!data) return null;
 
+  if (data.activity_only) {
+    return (
+      <div className="space-y-5 max-w-3xl">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/guests')} className="btn-secondary btn-sm"><ArrowLeft size={14} /> 返回</button>
+          <h2 className="text-xl font-bold text-gray-900">AI 匹配 · {data.seeker.nickname}</h2>
+        </div>
+        <div className="card bg-amber-50 border-amber-200 text-amber-800 text-sm leading-relaxed">
+          🎉 {data.seeker.nickname} 报名「只参加活动」，不参与相亲匹配。<br />
+          如需邀请 Ta 参加活动，请到活动详情页用「添加报名」手动添加。
+        </div>
+      </div>
+    );
+  }
+
   const { seeker, results, excluded } = data;
   const seekerAge = seeker.birth_year ? new Date().getFullYear() - seeker.birth_year : null;
   const filtered = results.filter(r => r.score >= minScore);

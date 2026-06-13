@@ -198,6 +198,8 @@ export default function Guests() {
                 <tr key={g.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/guests/${g.id}`)}>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
                     {g.nickname}
+                    {g.join_purpose === '活动' && <span className="ml-1.5 text-xs text-amber-600 bg-amber-50 px-1 rounded">活动</span>}
+                    {g.join_purpose === '交友' && <span className="ml-1.5 text-xs text-sky-600 bg-sky-50 px-1 rounded">交友</span>}
                     {g.admin_tags && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {g.admin_tags.split(',').filter(Boolean).slice(0, 3).map(t => (

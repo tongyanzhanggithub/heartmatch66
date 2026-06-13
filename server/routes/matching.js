@@ -334,9 +334,15 @@ router.get('/:guestId', (req, res) => {
   const seeker = db.prepare('SELECT * FROM guests WHERE id = ? AND deleted = 0').get(req.params.guestId);
   if (!seeker) return res.status(404).json({ error: '嘉宾不存在' });
 
+  // 仅参加活动的人群（含已婚）不参与相亲匹配
+  if (seeker.join_purpose === '活动') {
+    return res.json({ seeker, results: [], excluded: [], unscorable: [], activity_only: true,
+      note: '该用户报名时选择「只参加活动」，不参与相亲匹配。' });
+  }
+
   const oppositeGender = seeker.gender === '男' ? '女' : '男';
   const candidates = db.prepare(
-    "SELECT * FROM guests WHERE deleted = 0 AND gender = ? AND audit_status = '通过' AND blacklisted = 0 AND id != ?"
+    "SELECT * FROM guests WHERE deleted = 0 AND gender = ? AND audit_status = '通过' AND blacklisted = 0 AND id != ? AND (join_purpose IS NULL OR join_purpose != '活动')"
   ).all(oppositeGender, seeker.id);
 
   const all = candidates.map(c => ({ guest: c, ...matchPair(seeker, c) }));

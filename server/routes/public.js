@@ -76,7 +76,8 @@ router.post('/submit', (req, res) => {
   if (!b.nickname || !b.gender || !b.contact) {
     return res.status(400).json({ error: '昵称、性别和联系方式必填' });
   }
-  if (!b.single_promise) {
+  // 单身承诺仅相亲/交友（单身人群）强制；「只参加活动」人群（可能已婚）免签
+  if (b.join_purpose !== '活动' && !b.single_promise) {
     return res.status(400).json({ error: '请勾选单身承诺' });
   }
   if (!b.agree_disclaimer) {
@@ -107,7 +108,7 @@ router.post('/submit', (req, res) => {
     'work_type', 'school', 'mbti', 'intention', 'relationship_value', 'lifestyle_desc',
     'family_plan', 'preferred_date', 'dealbreakers', 'personality_tags', 'sport_tags',
     'lifestyle_tags', 'value_tags', 'qa_answers', 'same_city_only', 'photos', 'apply_event_id',
-    'attachment_style', 'attachment_scores',
+    'attachment_style', 'attachment_scores', 'join_purpose',
   ];
 
   // 从完整生日自动推出出生年份（仅当能解析出 4 位年份时，避免把 NaN 塞进 INTEGER 列）

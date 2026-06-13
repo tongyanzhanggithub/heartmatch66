@@ -245,6 +245,8 @@ const newGuestCols = [
   // 依恋类型评估（认真相亲：对亲密关系预测力强）
   ['attachment_style', 'TEXT'],   // 安全型/焦虑型/回避型/混乱型
   ['attachment_scores', 'TEXT'],  // JSON {anxiety, avoidance}
+  // 参与目的：相亲/交友进匹配池，活动（含已婚）不进
+  ['join_purpose', 'TEXT'],
 ];
 for (const [col, type] of newGuestCols) {
   if (!guestCols.includes(col)) {

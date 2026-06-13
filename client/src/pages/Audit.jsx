@@ -97,6 +97,7 @@ function AuditCard({ guest, onAction }) {
 
           {/* 基本与条件 */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
+            <InfoItem label="参与目的" value={guest.join_purpose} />
             <InfoItem label="出生日期" value={guest.birth_date || guest.birth_year} />
             <InfoItem label="出生时辰" value={guest.birth_time} />
             <InfoItem label="出生地" value={guest.birth_place} />

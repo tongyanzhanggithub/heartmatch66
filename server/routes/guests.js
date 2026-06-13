@@ -97,7 +97,7 @@ router.put('/:id', (req, res) => {
     'work_type','school','mbti','intention','relationship_value','lifestyle_desc',
     'family_plan','preferred_date','dealbreakers','personality_tags','sport_tags',
     'lifestyle_tags','value_tags','qa_answers','same_city_only','admin_tags',
-    'photos','blacklisted','blacklist_reason','attachment_style','attachment_scores'];
+    'photos','blacklisted','blacklist_reason','attachment_style','attachment_scores','join_purpose'];
 
   const { sanitizePhotos } = require('../upload');
   const updates = [];
