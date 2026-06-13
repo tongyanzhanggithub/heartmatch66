@@ -11,6 +11,7 @@ import Matching from './pages/Matching';
 import Hepan from './pages/Hepan';
 import Introductions from './pages/Introductions';
 import Cases from './pages/Cases';
+import Staff from './pages/Staff';
 import Audit from './pages/Audit';
 import Tags from './pages/Tags';
 import Members from './pages/Members';
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="hepan" element={<Hepan />} />
           <Route path="introductions" element={<Introductions />} />
           <Route path="cases" element={<Cases />} />
+          <Route path="staff" element={<Staff />} />
           <Route path="audit" element={<Audit />} />
           <Route path="tags" element={<Tags />} />
           <Route path="members" element={<Members />} />
