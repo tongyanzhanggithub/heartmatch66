@@ -29,6 +29,25 @@ function download(canvas, filename) {
   a.click();
 }
 
+// 中文按字符自动换行；超过 maxLines 行则末行省略号。返回绘制后的 y。
+function wrapText(ctx, text, x, y, maxW, lineH, maxLines = 99) {
+  const lines = [];
+  let line = '';
+  for (const ch of String(text || '')) {
+    if (ctx.measureText(line + ch).width > maxW) { lines.push(line); line = ch; }
+    else line += ch;
+  }
+  if (line) lines.push(line);
+  const show = lines.slice(0, maxLines);
+  if (lines.length > maxLines) {
+    let last = show[maxLines - 1];
+    while (ctx.measureText(last + '…').width > maxW && last.length > 1) last = last.slice(0, -1);
+    show[maxLines - 1] = last + '…';
+  }
+  for (const ln of show) { ctx.fillText(ln, x, y); y += lineH; }
+  return y;
+}
+
 const ZODIACS = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
 const zodiacOf = y => ZODIACS[(y - 4) % 12];
 
@@ -190,7 +209,7 @@ export function generateGuestCard(guest) {
 
 // ─── 八字合盘分享卡（升级版）────────────────────────
 export function generateHepanCard(report) {
-  const W = 750, H = 1150;
+  const W = 750, H = 1500;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -222,7 +241,7 @@ export function generateHepanCard(report) {
 
   // 白卡
   ctx.save();
-  roundRect(ctx, 45, 130, W - 90, H - 290, 34);
+  roundRect(ctx, 45, 130, W - 90, H - 250, 34);
   ctx.fillStyle = 'rgba(255,255,255,0.86)';
   ctx.shadowColor = 'rgba(168,85,247,0.22)';
   ctx.shadowBlur = 42;
@@ -288,59 +307,178 @@ export function generateHepanCard(report) {
     ctx.fillText(kw, W / 2, 800);
   }
 
-  // 维度摘要：固定两列对齐（左列标题、右列分数），中间点线引导
-  const secs = report.sections.slice(0, 4);
-  const rowH = 52;
+  // 维度详解：标题 + 分数徽章 + 话术（自动换行，最多 3 行）
   let y = 880;
-  const colL = 175, colR = W - 175;
-  for (let i = 0; i < secs.length; i++) {
-    const s = secs[i];
-    const rowY = y + i * rowH;
-
-    // 行间淡分隔线
-    if (i > 0) {
-      ctx.strokeStyle = 'rgba(168,85,247,0.12)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(colL, rowY - rowH / 2 - 9);
-      ctx.lineTo(colR, rowY - rowH / 2 - 9);
-      ctx.stroke();
-    }
-
-    // 左列：标题
+  const PAD = 80;
+  for (const s of report.sections.slice(0, 4)) {
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#6b7280';
-    ctx.font = `26px ${FONT}`;
-    ctx.fillText(s.title, colL, rowY);
+    ctx.fillStyle = '#1f2937';
+    ctx.font = `bold 25px ${FONT}`;
+    ctx.fillText(s.title, PAD, y);
 
-    // 右列：分数（右对齐）
     ctx.textAlign = 'right';
     ctx.fillStyle = s.score_delta >= 0 ? '#16a34a' : '#dc2626';
-    ctx.font = `bold 27px ${FONT}`;
-    const sign = s.score_delta > 0 ? '+' : '';
-    ctx.fillText(`${sign}${s.score_delta} 分`, colR, rowY);
+    ctx.font = `bold 24px ${FONT}`;
+    ctx.fillText(`${s.score_delta > 0 ? '+' : ''}${s.score_delta} 分`, W - PAD, y);
+    y += 32;
 
-    // 中间点线引导（从标题尾到分数头）
-    ctx.font = `26px ${FONT}`;
     ctx.textAlign = 'left';
-    const titleW = ctx.measureText(s.title).width;
-    ctx.font = `bold 27px ${FONT}`;
-    const scoreW = ctx.measureText(`${sign}${s.score_delta} 分`).width;
-    ctx.strokeStyle = 'rgba(156,163,175,0.4)';
-    ctx.setLineDash([2, 6]);
-    ctx.beginPath();
-    ctx.moveTo(colL + titleW + 18, rowY - 8);
-    ctx.lineTo(colR - scoreW - 18, rowY - 8);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.fillStyle = '#6b7280';
+    ctx.font = `21px ${FONT}`;
+    y = wrapText(ctx, s.detail, PAD, y, W - PAD * 2, 30, 3) + 18;
   }
-  ctx.textAlign = 'center';
+
+  // 宜约会吉日（彩蛋）
+  if (report.lucky_dates && report.lucky_dates.length) {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#b45309';
+    ctx.font = `bold 22px ${FONT}`;
+    ctx.fillText('📅 黄历宜约会吉日', PAD, y);
+    y += 32;
+    ctx.fillStyle = '#92400e';
+    ctx.font = `20px ${FONT}`;
+    y = wrapText(ctx, report.lucky_dates.map(d => d.date).join('　'), PAD, y, W - PAD * 2, 28, 2);
+  }
 
   // 底部
   ctx.textAlign = 'center';
   ctx.fillStyle = '#9ca3af';
   ctx.font = `22px ${FONT}`;
-  ctx.fillText('半日相知 · 仅供娱乐参考 · 感情幸福靠经营 💕', W / 2, H - 60);
+  ctx.fillText('半日相知 · 仅供娱乐参考 · 感情幸福靠经营 💕', W / 2, H - 55);
 
   download(canvas, `合盘_${report.a.nickname}x${report.b.nickname}.png`);
+}
+
+// ─── AI 双向匹配分享卡 ───────────────────────────────
+// item: matchPair 结果（含 guest/score/a_to_b/b_to_a/commonality/red_flags）；seeker: 发起匹配的嘉宾
+export function generateMatchCard(item, seeker) {
+  const cand = item.guest;
+  const W = 750, H = 1220;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const year = new Date().getFullYear();
+
+  // 背景：紫粉渐变
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#f5f3ff'); bg.addColorStop(0.5, '#faf5ff'); bg.addColorStop(1, '#fce7f3');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  softCircle(ctx, 90, 120, 220, 'rgba(168,85,247,0.15)');
+  softCircle(ctx, W - 70, H - 200, 260, 'rgba(236,72,153,0.13)');
+  softCircle(ctx, W - 110, 90, 120, 'rgba(99,102,241,0.16)');
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#7c3aed';
+  ctx.font = `bold 38px ${FONT}`;
+  ctx.fillText('💞 AI 双向匹配报告', W / 2, 90);
+
+  // 白卡
+  ctx.save();
+  roundRect(ctx, 45, 125, W - 90, H - 220, 34);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.shadowColor = 'rgba(124,58,237,0.18)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
+  ctx.fill();
+  ctx.restore();
+
+  // 双方
+  const sAge = seeker.birth_year ? year - seeker.birth_year : null;
+  const cAge = cand.birth_year ? year - cand.birth_year : null;
+  ctx.fillStyle = '#1f2937';
+  ctx.font = `bold 44px ${FONT}`;
+  ctx.fillText(seeker.nickname, W / 2 - 160, 205);
+  ctx.fillText(cand.nickname, W / 2 + 160, 205);
+  ctx.font = '40px serif';
+  ctx.fillText('💞', W / 2, 202);
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = `21px ${FONT}`;
+  const metaS = [sAge ? `${sAge}岁` : null, seeker.circle, seeker.education].filter(Boolean).join(' · ');
+  const metaC = [cAge ? `${cAge}岁` : null, cand.circle, cand.education].filter(Boolean).join(' · ');
+  ctx.fillText(metaS, W / 2 - 160, 240);
+  ctx.fillText(metaC, W / 2 + 160, 240);
+
+  // 总分环
+  const scx = W / 2, scy = 370;
+  const ring = ctx.createLinearGradient(scx - 95, scy - 95, scx + 95, scy + 95);
+  ring.addColorStop(0, '#a855f7'); ring.addColorStop(1, '#ec4899');
+  ctx.strokeStyle = ring; ctx.lineWidth = 13;
+  ctx.beginPath(); ctx.arc(scx, scy, 90, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#7c3aed'; ctx.font = `bold 84px ${FONT}`;
+  ctx.fillText(String(item.score), scx, scy + 26);
+  ctx.fillStyle = '#9ca3af'; ctx.font = `21px ${FONT}`;
+  ctx.fillText('匹配指数', scx, scy + 60);
+  const level = item.score >= 85 ? '高度契合' : item.score >= 70 ? '较为匹配' : item.score >= 55 ? '一般匹配' : '缘分待培养';
+  ctx.fillStyle = '#86198f'; ctx.font = `bold 32px ${FONT}`;
+  ctx.fillText(`「${level}」`, scx, scy + 112);
+
+  // 双向契合条
+  let y = scy + 170;
+  const bar = (label, pct) => {
+    const x0 = 90, x1 = W - 90, bw = x1 - x0;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#6b7280'; ctx.font = `21px ${FONT}`;
+    ctx.fillText(label, x0, y - 8);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#7c3aed'; ctx.font = `bold 21px ${FONT}`;
+    ctx.fillText(pct == null ? '—' : `${pct}%`, x1, y - 8);
+    ctx.fillStyle = '#f3e8ff'; roundRect(ctx, x0, y, bw, 12, 6); ctx.fill();
+    if (pct != null) {
+      const g = ctx.createLinearGradient(x0, 0, x1, 0);
+      g.addColorStop(0, '#a855f7'); g.addColorStop(1, '#ec4899');
+      ctx.fillStyle = g; roundRect(ctx, x0, y, Math.max(bw * pct / 100, 8), 12, 6); ctx.fill();
+    }
+    y += 54;
+  };
+  bar(`Ta 符合 ${seeker.nickname} 的期望`, item.a_to_b.pct);
+  bar(`${seeker.nickname} 符合 Ta 的期望`, item.b_to_a.pct);
+  if (item.commonality && item.commonality.pct != null) bar('双方共性契合', item.commonality.pct);
+
+  // 匹配亮点（取双向明细 + 共性里分数最高的，去重）
+  const pool = [
+    ...item.a_to_b.details, ...item.b_to_a.details, ...(item.commonality?.items || []),
+  ].filter(d => d.score >= 70).sort((a, b) => b.score - a.score);
+  const seen = new Set(), top = [];
+  for (const h of pool) { if (seen.has(h.label)) continue; seen.add(h.label); top.push(h); if (top.length >= 5) break; }
+
+  y += 4;
+  ctx.textAlign = 'left'; ctx.fillStyle = '#7c3aed'; ctx.font = `bold 25px ${FONT}`;
+  ctx.fillText('✨ 匹配亮点', 90, y); y += 34;
+  ctx.font = `21px ${FONT}`;
+  if (top.length === 0) {
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillText('资料完善后可呈现更多匹配亮点', 90, y); y += 32;
+  } else {
+    for (const h of top) {
+      ctx.fillStyle = '#ec4899'; ctx.fillText('●', 90, y);
+      ctx.fillStyle = '#374151';
+      let line = `${h.label}：${h.note || ''}`;
+      const full = line;
+      while (ctx.measureText(line).width > W - 250 && line.length > 4) line = line.slice(0, -1);
+      if (line.length < full.length) line += '…';
+      ctx.fillText(line, 116, y);
+      y += 33;
+    }
+  }
+
+  // 红旗提醒
+  if (item.red_flags && item.red_flags.length) {
+    y += 10;
+    const boxH = 38 + item.red_flags.length * 28;
+    roundRect(ctx, 80, y - 24, W - 160, boxH, 14); ctx.fillStyle = '#fef2f2'; ctx.fill();
+    ctx.fillStyle = '#dc2626'; ctx.font = `bold 21px ${FONT}`;
+    ctx.textAlign = 'left'; ctx.fillText('⚠️ 需人工确认', 100, y); y += 30;
+    ctx.font = `19px ${FONT}`; ctx.fillStyle = '#b91c1c';
+    for (const f of item.red_flags) {
+      let line = `${f.who}的底线：${f.text}`;
+      const full = line;
+      while (ctx.measureText(line).width > W - 230 && line.length > 4) line = line.slice(0, -1);
+      if (line.length < full.length) line += '…';
+      ctx.fillText(line, 100, y); y += 28;
+    }
+  }
+
+  // 底部
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = `20px ${FONT}`;
+  ctx.fillText('半日相知 · AI 双向匹配 · 仅供红娘参考', W / 2, H - 45);
+
+  download(canvas, `匹配卡_${seeker.nickname}x${cand.nickname}.png`);
 }

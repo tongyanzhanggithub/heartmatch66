@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { ArrowLeft, Sparkles, User, ChevronDown, ChevronUp, AlertTriangle, Ban, HeartHandshake } from 'lucide-react';
+import { ArrowLeft, Sparkles, User, ChevronDown, ChevronUp, AlertTriangle, Ban, HeartHandshake, ImageDown } from 'lucide-react';
+import { generateMatchCard } from '../utils/cards';
 
 const LEVELS = [
   { min: 85, border: 'border-green-300', bg: 'bg-green-50', badge: 'bg-green-500', label: '高度契合' },
@@ -52,7 +53,7 @@ function DetailList({ title, details, skipped }) {
   );
 }
 
-function MatchCard({ item, seekerName, seekerId }) {
+function MatchCard({ item, seekerName, seekerId, seeker }) {
   const [expanded, setExpanded] = useState(false);
   const [introState, setIntroState] = useState(''); // '' | 'saving' | 'done' | error msg
   const { guest: g, score } = item;
@@ -137,6 +138,10 @@ function MatchCard({ item, seekerName, seekerId }) {
               className="btn-sm text-xs bg-pink-500 text-white hover:bg-pink-600 rounded-lg px-3 py-1.5 inline-flex items-center gap-1 disabled:opacity-50">
               <HeartHandshake size={13} /> {introState === 'saving' ? '牵线中...' : '牵线'}
             </button>
+            <button onClick={e => { e.stopPropagation(); generateMatchCard(item, seeker); }}
+              className="btn-secondary btn-sm text-xs inline-flex items-center gap-1">
+              <ImageDown size={13} /> 匹配卡
+            </button>
             <a href={`/guests/${g.id}`} onClick={e => e.stopPropagation()} className="btn-secondary btn-sm text-xs">查看档案</a>
           </div>
         </div>
@@ -214,7 +219,7 @@ export default function Matching() {
         {filtered.length === 0 ? (
           <div className="text-center py-10 text-gray-400">没有符合条件的匹配结果</div>
         ) : filtered.map(item => (
-          <MatchCard key={item.guest.id} item={item} seekerName={seeker.nickname} seekerId={seeker.id} />
+          <MatchCard key={item.guest.id} item={item} seekerName={seeker.nickname} seekerId={seeker.id} seeker={seeker} />
         ))}
       </div>
 
