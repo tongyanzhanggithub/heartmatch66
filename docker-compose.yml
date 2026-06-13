@@ -9,6 +9,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - DB_PATH=/app/server/data/data.db
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}

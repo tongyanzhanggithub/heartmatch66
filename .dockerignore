@@ -1,0 +1,28 @@
+# 依赖与构建产物：镜像内会重新 npm ci / build，
+# 绝不能把本机(Windows)的 node_modules 带进 Linux 容器，否则 rollup/better-sqlite3 原生模块崩溃
+**/node_modules
+client/dist
+mobile/dist
+
+# 数据与隐私：绝不进镜像（运行时通过挂载卷与环境变量提供）
+server/data.db
+server/data.db-*
+server/data/
+server/backups/
+server/uploads/
+.env
+.env.*
+**/.env
+
+# 版本控制与工具
+.git
+.gitignore
+.claude
+
+# 文档与杂项
+*.md
+*.zip
+prd_text.txt
+**/test2.json
+p1.json
+p2.json

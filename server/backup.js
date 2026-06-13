@@ -14,7 +14,7 @@ function runBackup() {
 
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const dest = path.join(BACKUP_DIR, `data_${stamp}.db`);
-    fs.copyFileSync(path.join(__dirname, 'data.db'), dest);
+    fs.copyFileSync(db.DB_PATH, dest);
 
     // 清理旧备份
     const files = fs.readdirSync(BACKUP_DIR)

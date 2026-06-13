@@ -1,8 +1,12 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, 'data.db');
+// DB 路径可由环境变量覆盖；生产用 DB_PATH 指向已挂载的持久化卷（如 /app/server/data/data.db），
+// 否则默认 server/data.db（本地开发）。确保所在目录存在。
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data.db');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
@@ -256,3 +260,4 @@ if (!existing) {
 }
 
 module.exports = db;
+module.exports.DB_PATH = DB_PATH;
