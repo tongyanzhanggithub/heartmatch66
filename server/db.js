@@ -131,6 +131,48 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
+
+  -- 牵线/约见记录：相亲转化闭环的核心，从「已牵线」到「已成功/已告吹」的全过程
+  CREATE TABLE IF NOT EXISTS introductions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guest_a INTEGER NOT NULL REFERENCES guests(id),
+    guest_b INTEGER NOT NULL REFERENCES guests(id),
+    event_id INTEGER REFERENCES events(id),
+    status TEXT NOT NULL DEFAULT '已牵线'
+      CHECK(status IN ('已牵线','已交换微信','已约见','交往中','已成功','已告吹')),
+    match_score INTEGER,
+    introduced_by TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  -- 跟进时间线：可挂在嘉宾或牵线上，next_date 用于「今日待跟进」提醒
+  CREATE TABLE IF NOT EXISTS follow_ups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_type TEXT NOT NULL CHECK(target_type IN ('guest','intro')),
+    target_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    next_date TEXT,
+    done INTEGER NOT NULL DEFAULT 0,
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  -- 成功案例库：脱敏宣传素材，可由「已成功」的牵线沉淀而来
+  CREATE TABLE IF NOT EXISTS success_cases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    introduction_id INTEGER REFERENCES introductions(id),
+    title TEXT,
+    story TEXT,
+    is_public INTEGER NOT NULL DEFAULT 0,
+    happened_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_intro_status ON introductions(status);
+  CREATE INDEX IF NOT EXISTS idx_followup_target ON follow_ups(target_type, target_id);
+  CREATE INDEX IF NOT EXISTS idx_followup_next ON follow_ups(next_date, done);
 `);
 
 // Migrations: add new columns if they don't exist

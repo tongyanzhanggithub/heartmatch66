@@ -32,14 +32,14 @@ router.get('/:id', (req, res) => {
       SUM(CASE WHEN r.paid=1 AND r.audit_status='通过' AND g.gender='女' THEN 1 ELSE 0 END) as paid_female,
       SUM(CASE WHEN r.matched_with IS NOT NULL THEN 1 ELSE 0 END) as matched_marked
     FROM registrations r JOIN guests g ON r.guest_id = g.id
-    WHERE r.event_id = ?
+    WHERE r.event_id = ? AND g.deleted = 0
   `).get(req.params.id);
 
   const registrations = db.prepare(`
     SELECT r.*, g.nickname, g.gender, g.circle, g.occupation, g.audit_status as guest_audit_status,
            g.blacklisted
     FROM registrations r JOIN guests g ON r.guest_id = g.id
-    WHERE r.event_id = ? ORDER BY r.sign_up_at DESC
+    WHERE r.event_id = ? AND g.deleted = 0 ORDER BY r.sign_up_at DESC
   `).all(req.params.id);
 
   res.json({ ...event, stats, registrations });

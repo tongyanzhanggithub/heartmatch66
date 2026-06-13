@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { ArrowLeft, Sparkles, User, ChevronDown, ChevronUp, AlertTriangle, Ban } from 'lucide-react';
+import { ArrowLeft, Sparkles, User, ChevronDown, ChevronUp, AlertTriangle, Ban, HeartHandshake } from 'lucide-react';
 
 const LEVELS = [
   { min: 85, border: 'border-green-300', bg: 'bg-green-50', badge: 'bg-green-500', label: '高度契合' },
@@ -52,11 +52,23 @@ function DetailList({ title, details, skipped }) {
   );
 }
 
-function MatchCard({ item, seekerName }) {
+function MatchCard({ item, seekerName, seekerId }) {
   const [expanded, setExpanded] = useState(false);
+  const [introState, setIntroState] = useState(''); // '' | 'saving' | 'done' | error msg
   const { guest: g, score } = item;
   const level = getLevel(score);
   const age = g.birth_year ? new Date().getFullYear() - g.birth_year : null;
+
+  async function introduce(e) {
+    e.stopPropagation();
+    setIntroState('saving');
+    try {
+      await api.post('/introductions', { guest_a: seekerId, guest_b: g.id, match_score: score });
+      setIntroState('done');
+    } catch (err) {
+      setIntroState(err.response?.data?.error || '牵线失败');
+    }
+  }
 
   return (
     <div className={`rounded-xl border ${level.border} ${level.bg} overflow-hidden`}>
@@ -115,7 +127,16 @@ function MatchCard({ item, seekerName }) {
               MBTI 参考：{item.mbti.a || '未填'} × {item.mbti.b || '未填'}（性格类型仅供聊天参考，不计入评分）
             </p>
           )}
-          <div className="flex justify-end">
+          <div className="flex justify-end items-center gap-2">
+            {introState === 'done' ? (
+              <span className="text-xs text-green-600 font-medium">✓ 已加入牵线记录</span>
+            ) : introState && introState !== 'saving' ? (
+              <span className="text-xs text-amber-600">{introState}</span>
+            ) : null}
+            <button onClick={introduce} disabled={introState === 'saving' || introState === 'done'}
+              className="btn-sm text-xs bg-pink-500 text-white hover:bg-pink-600 rounded-lg px-3 py-1.5 inline-flex items-center gap-1 disabled:opacity-50">
+              <HeartHandshake size={13} /> {introState === 'saving' ? '牵线中...' : '牵线'}
+            </button>
             <a href={`/guests/${g.id}`} onClick={e => e.stopPropagation()} className="btn-secondary btn-sm text-xs">查看档案</a>
           </div>
         </div>
@@ -193,7 +214,7 @@ export default function Matching() {
         {filtered.length === 0 ? (
           <div className="text-center py-10 text-gray-400">没有符合条件的匹配结果</div>
         ) : filtered.map(item => (
-          <MatchCard key={item.guest.id} item={item} seekerName={seeker.nickname} />
+          <MatchCard key={item.guest.id} item={item} seekerName={seeker.nickname} seekerId={seeker.id} />
         ))}
       </div>
 

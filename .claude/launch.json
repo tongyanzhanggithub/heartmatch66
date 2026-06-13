@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "admin",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--host"],
+      "cwd": "client",
+      "autoPort": true
+    },
+    {
+      "name": "apply",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--host"],
+      "cwd": "mobile",
+      "autoPort": true
+    }
+  ]
+}

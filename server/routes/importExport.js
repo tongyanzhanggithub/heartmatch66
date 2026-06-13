@@ -81,6 +81,27 @@ const CN2DB = Object.fromEntries(FIELD_MAP.map(([cn, dbf]) => [cn, dbf]));
 const BOOL_FIELDS = ['single_promise', 'agree_disclaimer', 'display_consent', 'portrait_consent', 'blacklisted'];
 const INT_FIELDS = ['birth_year', 'height', 'pref_age_min', 'pref_age_max', 'pref_height_min', 'pref_height_max'];
 
+// 出生日期规范化：支持 Excel 日期序列号、YYYY-M-D / YYYY/M/D / YYYY.M.D。
+// 返回标准 YYYY-MM-DD；无法识别为合法日期则返回 null（避免脏数据导致命理排盘崩溃）。
+function normalizeBirthDate(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') {
+    // 1900-2100 的数字是误填进日期列的年份，交给上层抠出 birth_year，不当日期
+    if (v >= 1900 && v <= 2100) return null;
+    if (v > 10000) { // 合理的 Excel 日期序列号
+      const o = XLSX.SSF.parse_date_code(v);
+      if (o && o.y) v = `${o.y}-${o.m}-${o.d}`;
+      else return null;
+    } else return null;
+  }
+  const s = String(v).trim().replace(/[./]/g, '-');
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 // 核验项目：JSON {real_name,id_card,single_promise} ↔ 可读的「实名,证件,单身承诺」
 const FLAG_LABELS = [['real_name', '实名'], ['id_card', '证件'], ['single_promise', '单身承诺']];
 function flagsToText(json) {
@@ -166,9 +187,15 @@ router.get('/template', (req, res) => {
 router.post('/import', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: '请上传文件' });
 
+  let buf = req.file.buffer;
+  // 剥掉 UTF-8 BOM（EF BB BF），否则带 BOM 的 CSV（如本系统导出的 CSV）会被 XLSX 解析错乱
+  if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
+    buf = buf.subarray(3);
+  }
+
   let wb;
   try {
-    wb = XLSX.read(req.file.buffer, { type: 'buffer', codepage: 65001 });
+    wb = XLSX.read(buf, { type: 'buffer', codepage: 65001 });
   } catch {
     return res.status(400).json({ error: '文件解析失败，请上传 CSV 或 Excel 文件' });
   }
@@ -190,6 +217,16 @@ router.post('/import', upload.single('file'), (req, res) => {
         if (v === '') continue;
         if (BOOL_FIELDS.includes(dbf)) v = (v === '是' || v === '1' || v === 1 || v === true) ? 1 : 0;
         if (INT_FIELDS.includes(dbf)) { v = parseInt(v); if (isNaN(v)) continue; }
+        if (dbf === 'birth_date') {
+          const norm = normalizeBirthDate(v);
+          if (!norm) {
+            // 非法日期：能抠出 4 位年份就转存出生年份，否则丢弃该字段（不污染命理排盘）
+            const yr = String(v).match(/(\d{4})/);
+            if (yr && rec.birth_year == null) rec.birth_year = parseInt(yr[1]);
+            continue;
+          }
+          v = norm;
+        }
         if (dbf === 'audit_flags') v = textToFlags(v);
         if (dbf === 'photos') {
           const clean = require('../upload').sanitizePhotos(v);

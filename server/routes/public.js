@@ -109,8 +109,11 @@ router.post('/submit', (req, res) => {
     'lifestyle_tags', 'value_tags', 'qa_answers', 'same_city_only', 'photos', 'apply_event_id',
   ];
 
-  // 从完整生日自动推出出生年份
-  if (b.birth_date && !b.birth_year) b.birth_year = parseInt(b.birth_date.slice(0, 4));
+  // 从完整生日自动推出出生年份（仅当能解析出 4 位年份时，避免把 NaN 塞进 INTEGER 列）
+  if (b.birth_date && !b.birth_year) {
+    const yr = String(b.birth_date).match(/^(\d{4})/);
+    b.birth_year = yr ? parseInt(yr[1]) : null;
+  }
 
   const boolCols = ['single_promise', 'display_consent', 'agree_disclaimer', 'portrait_consent'];
   const values = cols.map(c => {

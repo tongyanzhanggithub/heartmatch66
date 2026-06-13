@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCheck, CalendarDays, LogOut, Heart, Sparkles, Tag, ScrollText, UserCog, KeyRound, BadgeCheck } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, CalendarDays, LogOut, Heart, Sparkles, Tag, ScrollText, UserCog, KeyRound, BadgeCheck, HeartHandshake, Trophy } from 'lucide-react';
 import api from '../api';
 
 const nav = [
@@ -10,6 +10,8 @@ const nav = [
   { to: '/tags', icon: Tag, label: '标签分群', sub: '按标签/圈层看人' },
   { to: '/members', icon: BadgeCheck, label: '会员名单', sub: '缴费会员管理' },
   { to: '/events', icon: CalendarDays, label: '活动管理' },
+  { to: '/introductions', icon: HeartHandshake, label: '牵线记录', sub: '转化闭环 · 跟进追踪' },
+  { to: '/cases', icon: Trophy, label: '成功案例', sub: '脱单故事 · 宣传素材' },
   { to: '/guests', icon: Sparkles, label: 'AI 智能匹配', sub: '在嘉宾列表点击匹配', dim: true },
   { to: '/hepan', icon: Heart, label: '八字合盘', sub: '缘分测算 · 星座契合' },
   { to: '/oplogs', icon: ScrollText, label: '操作记录', sub: '账号操作审计', adminOnly: true },

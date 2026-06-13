@@ -36,6 +36,10 @@ app.use('/api/fortune', auth, require('./routes/fortune'));
 app.use('/api/oplogs', auth, require('./routes/oplogs'));
 app.use('/api/accounts', auth, require('./routes/accounts'));
 app.use('/api/members', auth, oplog, require('./routes/members'));
+app.use('/api/introductions', auth, oplog, require('./routes/introductions'));
+app.use('/api/followups', auth, oplog, require('./routes/followups'));
+app.use('/api/cases', auth, oplog, require('./routes/cases'));
+app.use('/api/reports', auth, oplog, require('./routes/reports'));
 app.use('/api/uploads', auth, require('./routes/uploads'));
 
 // 嘉宾照片：随机文件名不可猜测，缓存 7 天

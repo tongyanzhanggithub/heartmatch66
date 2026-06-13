@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import EventForm from '../components/EventForm';
 import QRCode from 'qrcode';
-import { ArrowLeft, Edit, Trash2, Plus, Check, X, ClipboardList, Sparkles, UserCheck, QrCode } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Check, X, ClipboardList, Sparkles, UserCheck, QrCode, Download } from 'lucide-react';
 import AddRegistrationModal from '../components/AddRegistrationModal';
 import RecommendModal from '../components/RecommendModal';
 import CheckinMode from '../components/CheckinMode';
+import { downloadReport } from '../utils/download';
 
 const STATUS_COLORS = { '筹备': 'bg-gray-100 text-gray-600', '报名中': 'bg-blue-100 text-blue-700', '进行中': 'bg-green-100 text-green-700', '已结束': 'bg-gray-100 text-gray-500', '取消': 'bg-red-100 text-red-600' };
 
@@ -173,7 +174,12 @@ export default function EventDetail() {
       <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <h3 className="font-semibold text-gray-800">报名名单</h3>
-          <button className="btn-primary btn-sm" onClick={() => setShowAddReg(true)}><Plus size={14} /> 添加报名</button>
+          <div className="flex gap-2">
+            <button className="btn-secondary btn-sm" onClick={() => downloadReport(`/reports/event/${id}/export?format=xlsx`, `报名表_${event.title}.xlsx`)}>
+              <Download size={14} /> 导出报名表
+            </button>
+            <button className="btn-primary btn-sm" onClick={() => setShowAddReg(true)}><Plus size={14} /> 添加报名</button>
+          </div>
         </div>
         {error && <div className="px-4 py-2 bg-red-50 text-red-600 text-sm">{error}</div>}
         <table className="w-full">

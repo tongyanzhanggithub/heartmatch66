@@ -9,6 +9,8 @@ import EventDetail from './pages/EventDetail';
 import Reviews from './pages/Reviews';
 import Matching from './pages/Matching';
 import Hepan from './pages/Hepan';
+import Introductions from './pages/Introductions';
+import Cases from './pages/Cases';
 import Audit from './pages/Audit';
 import Tags from './pages/Tags';
 import Members from './pages/Members';
@@ -34,6 +36,8 @@ export default function App() {
           <Route path="reviews/:eventId" element={<Reviews />} />
           <Route path="matching/:guestId" element={<Matching />} />
           <Route path="hepan" element={<Hepan />} />
+          <Route path="introductions" element={<Introductions />} />
+          <Route path="cases" element={<Cases />} />
           <Route path="audit" element={<Audit />} />
           <Route path="tags" element={<Tags />} />
           <Route path="members" element={<Members />} />

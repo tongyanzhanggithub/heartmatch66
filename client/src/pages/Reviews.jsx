@@ -31,25 +31,28 @@ export default function Reviews() {
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
   useEffect(() => {
-    api.get(`/events/${eventId}`).then(r => {
-      setEvent(r.data);
-      // Auto-fill from registration stats
-      const s = r.data.stats;
-      setForm(f => ({
-        ...f,
-        registered: s.total,
-        attended: s.attended,
-        male_attended: s.attended_male,
-        female_attended: s.attended_female,
-        matches: s.matched_marked || 0,
-        // 票房按「已付费且审核通过」人数 × 票价自动计算
-        revenue_male: r.data.price_male * (s.paid_male || 0),
-        revenue_female: r.data.price_female * (s.paid_female || 0),
-      }));
-    });
-    api.get(`/reviews/event/${eventId}`).then(r => {
-      if (r.data) setForm(r.data);
-    });
+    // 串行加载，避免两个请求各自 setForm 竞态：有存档以存档为准，没存档才按报名统计预填
+    (async () => {
+      const ev = await api.get(`/events/${eventId}`);
+      setEvent(ev.data);
+      const rev = await api.get(`/reviews/event/${eventId}`);
+      if (rev.data) {
+        setForm(rev.data);
+      } else {
+        const s = ev.data.stats;
+        setForm(f => ({
+          ...f,
+          registered: s.total,
+          attended: s.attended,
+          male_attended: s.attended_male,
+          female_attended: s.attended_female,
+          matches: s.matched_marked || 0,
+          // 票房按「已付费且审核通过」人数 × 票价自动计算
+          revenue_male: ev.data.price_male * (s.paid_male || 0),
+          revenue_female: ev.data.price_female * (s.paid_female || 0),
+        }));
+      }
+    })();
   }, [eventId]);
 
   async function save() {

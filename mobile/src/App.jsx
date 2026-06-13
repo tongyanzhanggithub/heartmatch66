@@ -59,6 +59,15 @@ const BLANK = {
   value_tags:'', qa_answers:'', same_city_only:'', photos:'',
 };
 
+// ─── 草稿自动保存（防止中途退出丢失填写内容）──────────────
+const DRAFT_KEY = 'apply_draft_v1';
+function loadDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    return d && d.form ? d : null;
+  } catch { return null; }
+}
+
 // ─── small UI atoms ──────────────────────────────────────────
 function Label({ children, required }) {
   return <label className="block text-sm font-medium text-gray-700 mb-1.5">{children}{required && <span className="text-primary-500 ml-0.5">*</span>}</label>;
@@ -588,8 +597,12 @@ function SuccessScreen() {
 
 // ─── Main App ────────────────────────────────────────────────
 export default function App() {
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState(BLANK);
+  const [step, setStep] = useState(() => loadDraft()?.step || 0);
+  const [form, setForm] = useState(() => {
+    const d = loadDraft();
+    return d?.form ? { ...BLANK, ...d.form } : BLANK;
+  });
+  const [draftRestored, setDraftRestored] = useState(() => !!loadDraft());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -604,6 +617,21 @@ export default function App() {
       .then(({ data }) => { if (data.open) setApplyEvent(data); })
       .catch(() => { /* 活动无效则按普通报名处理 */ });
   }, []);
+
+  // 实时把填写内容存到本机草稿；空白表单不存，避免误触发"已恢复"提示
+  useEffect(() => {
+    if (done) return;
+    if (step === 0 && JSON.stringify(form) === JSON.stringify(BLANK)) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, step, savedAt: Date.now() })); } catch { /* 配额满则忽略 */ }
+  }, [form, step, done]);
+
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+    setForm(BLANK);
+    setStep(0);
+    setDraftRestored(false);
+    setError('');
+  }
 
   function validate() {
     if (step === 0) {
@@ -639,6 +667,7 @@ export default function App() {
     setError('');
     try {
       await axios.post(`${API}/public/submit`, { ...form, apply_event_id: applyEvent?.id || null });
+      localStorage.removeItem(DRAFT_KEY);
       setDone(true);
     } catch (err) {
       setError(err.response?.data?.error || '提交失败，请重试');
@@ -703,6 +732,13 @@ export default function App() {
 
       {/* Form */}
       <div className="flex-1 px-5 pt-4 pb-36 overflow-y-auto">
+        {draftRestored && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-primary-50 border border-primary-200 rounded-xl text-sm text-primary-700">
+            <span className="flex-1">📝 已为你恢复上次未填完的内容，可继续填写</span>
+            <button type="button" onClick={clearDraft} className="text-xs underline shrink-0">重新填写</button>
+            <button type="button" onClick={() => setDraftRestored(false)} className="text-primary-300 text-base leading-none shrink-0">×</button>
+          </div>
+        )}
         {step === 0 && <Step1 form={form} set={set} />}
         {step === 1 && <Step2 form={form} set={set} />}
         {step === 2 && <StepPersonality form={form} set={set} />}
@@ -728,6 +764,7 @@ export default function App() {
             跳过，稍后填写
           </button>
         )}
+        <p className="text-center text-[11px] text-gray-300 mt-2">✓ 内容已自动保存到本机，可随时关闭后继续填写</p>
       </div>
     </div>
   );

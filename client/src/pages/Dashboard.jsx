@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import api from '../api';
-import { Users, CalendarDays, TrendingUp, Clock, AlertCircle, Repeat } from 'lucide-react';
+import { Users, CalendarDays, TrendingUp, Clock, AlertCircle, Repeat, HeartHandshake, Bell, Check, Download } from 'lucide-react';
+import { downloadReport } from '../utils/download';
 
 const PIE_COLORS = ['#e07b54', '#e9a23b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#6366f1', '#14b8a6', '#a3a3a3'];
 
@@ -30,17 +31,37 @@ function StatCard({ icon: Icon, label, value, sub, color = 'primary' }) {
 const STATUS_LABELS = { '筹备': '筹备中', '报名中': '报名中', '进行中': '进行中', '已结束': '已结束', '取消': '已取消' };
 const STATUS_COLORS = { '筹备': 'bg-gray-100 text-gray-600', '报名中': 'bg-blue-100 text-blue-700', '进行中': 'bg-green-100 text-green-700', '已结束': 'bg-gray-100 text-gray-500', '取消': 'bg-red-100 text-red-600' };
 
+const FUNNEL_STAGES = ['已牵线', '已交换微信', '已约见', '交往中', '已成功'];
+const FUNNEL_DOT = { '已牵线': 'bg-gray-400', '已交换微信': 'bg-sky-500', '已约见': 'bg-indigo-500', '交往中': 'bg-pink-500', '已成功': 'bg-green-500' };
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
+  const [pending, setPending] = useState([]);
+  const [funnel, setFunnel] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => { api.get('/dashboard').then(r => setData(r.data)); }, []);
+  function loadPending() { api.get('/followups/pending').then(r => setPending(r.data)).catch(() => {}); }
+  useEffect(() => {
+    api.get('/dashboard').then(r => setData(r.data));
+    api.get('/introductions/stats/funnel').then(r => setFunnel(r.data)).catch(() => {});
+    loadPending();
+  }, []);
+
+  async function doneFollow(id) {
+    await api.put(`/followups/${id}`, { done: 1 });
+    loadPending();
+  }
 
   if (!data) return <div className="flex items-center justify-center h-64 text-gray-400">加载中...</div>;
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">仪表盘</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">仪表盘</h2>
+        <button className="btn-secondary btn-sm" onClick={() => downloadReport(`/reports/finance/export?format=xlsx`, `财务月报_${new Date().toISOString().slice(0,10)}.xlsx`)}>
+          <Download size={14} /> 导出财务月报
+        </button>
+      </div>
 
       {/* Alerts */}
       {(data.pendingAudit > 0 || data.pendingReg > 0) && (
@@ -55,6 +76,56 @@ export default function Dashboard() {
               <Clock size={16} /> {data.pendingReg} 条报名待审核
             </div>
           )}
+        </div>
+      )}
+
+      {/* 今日待跟进 */}
+      {pending.length > 0 && (
+        <div className="card border-amber-200 bg-amber-50/40">
+          <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+            <Bell size={16} className="text-amber-500" /> 今日待跟进
+            <span className="badge bg-amber-100 text-amber-700">{pending.length}</span>
+          </h3>
+          <div className="space-y-1.5">
+            {pending.map(f => {
+              const who = f.target_type === 'intro' ? `${f.intro_a || '?'} ♥ ${f.intro_b || '?'}` : (f.guest_nickname || '嘉宾');
+              const overdue = f.next_date < new Date().toISOString().slice(0, 10);
+              return (
+                <div key={f.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-sm">
+                  <button onClick={() => doneFollow(f.id)} title="标记完成"
+                    className="w-4 h-4 rounded border border-gray-300 hover:border-green-400 hover:bg-green-50 flex items-center justify-center shrink-0">
+                    <Check size={11} className="text-transparent hover:text-green-500" />
+                  </button>
+                  <span
+                    className={`shrink-0 text-xs px-1.5 py-0.5 rounded ${overdue ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
+                    {overdue ? '逾期' : '今天'} {f.next_date}
+                  </span>
+                  <span className="font-medium text-gray-700 shrink-0">{who}</span>
+                  <span className="text-gray-500 truncate">{f.content}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 牵线转化漏斗 */}
+      {funnel && funnel.total > 0 && (
+        <div className="card cursor-pointer hover:border-primary-200" onClick={() => navigate('/introductions')}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2"><HeartHandshake size={16} className="text-pink-500" /> 牵线转化漏斗</h3>
+            <span className="text-sm text-gray-500">成功率 <strong className="text-green-600">{funnel.success_rate}%</strong></span>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {FUNNEL_STAGES.map(s => (
+              <div key={s} className="text-center">
+                <p className="text-xl font-bold text-gray-900">{funnel.counts[s]}</p>
+                <p className="text-xs text-gray-400 mt-0.5 flex items-center justify-center gap-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${FUNNEL_DOT[s]}`} />{s}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

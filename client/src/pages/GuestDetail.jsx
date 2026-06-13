@@ -2,8 +2,47 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import GuestForm from '../components/GuestForm';
-import { ArrowLeft, Edit, Trash2, AlertTriangle, ImageDown } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, AlertTriangle, ImageDown, HeartHandshake, MessageCircle } from 'lucide-react';
 import { generateGuestCard } from '../utils/cards';
+import FollowUps from '../components/FollowUps';
+
+const INTRO_STATUS_COLOR = {
+  '已牵线': 'bg-gray-100 text-gray-600', '已交换微信': 'bg-sky-100 text-sky-700',
+  '已约见': 'bg-indigo-100 text-indigo-700', '交往中': 'bg-pink-100 text-pink-700',
+  '已成功': 'bg-green-100 text-green-700', '已告吹': 'bg-red-50 text-red-500',
+};
+
+// 该嘉宾的牵线情况
+function GuestIntroductions({ guestId }) {
+  const navigate = useNavigate();
+  const [list, setList] = useState([]);
+  useEffect(() => {
+    api.get('/introductions', { params: { guest_id: guestId } }).then(r => setList(r.data));
+  }, [guestId]);
+  if (list.length === 0) return null;
+  return (
+    <div className="card">
+      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><HeartHandshake size={16} className="text-pink-500" /> 牵线情况</h3>
+      <div className="space-y-2">
+        {list.map(i => {
+          const partner = i.guest_a === Number(guestId) ? i.b_nickname : i.a_nickname;
+          const partnerId = i.guest_a === Number(guestId) ? i.guest_b : i.guest_a;
+          return (
+            <div key={i.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-gray-50">
+              <button className="text-sm font-medium text-gray-800 hover:text-primary-600" onClick={() => navigate(`/guests/${partnerId}`)}>
+                ♥ {partner}
+              </button>
+              <div className="flex items-center gap-2">
+                {i.match_score != null && <span className="text-xs text-purple-500">{i.match_score}分</span>}
+                <span className={`badge ${INTRO_STATUS_COLOR[i.status]}`}>{i.status}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const AUDIT_COLORS = { '待审': 'bg-amber-100 text-amber-700', '通过': 'bg-green-100 text-green-700', '拒绝': 'bg-red-100 text-red-600', '待补': 'bg-gray-100 text-gray-600' };
 
@@ -158,7 +197,8 @@ export default function GuestDetail() {
 
   if (!guest) return <div className="flex items-center justify-center h-64 text-gray-400">加载中...</div>;
 
-  const flags = typeof guest.audit_flags === 'string' ? JSON.parse(guest.audit_flags || '{}') : (guest.audit_flags || {});
+  let flags = {};
+  try { flags = typeof guest.audit_flags === 'string' ? JSON.parse(guest.audit_flags || '{}') : (guest.audit_flags || {}); } catch { /* 脏数据兜底为空 */ }
   const age = guest.birth_year ? new Date().getFullYear() - guest.birth_year : null;
 
   return (
@@ -239,6 +279,13 @@ export default function GuestDetail() {
       </div>
 
       <AdminTags guest={guest} onSaved={load} />
+
+      <GuestIntroductions guestId={id} />
+
+      <div className="card">
+        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><MessageCircle size={16} className="text-primary-500" /> 跟进记录</h3>
+        <FollowUps targetType="guest" targetId={id} />
+      </div>
 
       {/* 性格与生活 */}
       {(guest.mbti || guest.intention || guest.personality_tags || guest.lifestyle_tags || guest.value_tags || guest.sport_tags || guest.qa_answers) && (

@@ -5,7 +5,14 @@ import PhotoUploader from './PhotoUploader';
 
 const CIRCLES = ['体制内', '教师', '医护', '金融', '互联网', '法律', '艺术传媒', '创业', '其他'];
 const EDUCATIONS = ['高中及以下', '大专', '本科', '硕士', '博士'];
-const MARITALS = ['未婚', '离异', '丧偶'];
+const MARITALS = ['未婚', '离异无孩', '离异带孩', '丧偶'];
+
+// 安全解析核验标记，脏数据兜底为空，避免编辑弹窗白屏
+function parseFlags(v) {
+  if (!v) return { real_name: false, id_card: false, single_promise: false };
+  try { return typeof v === 'string' ? JSON.parse(v) : v; }
+  catch { return { real_name: false, id_card: false, single_promise: false }; }
+}
 const AUDIT_STATUSES = ['待审', '通过', '拒绝', '待补'];
 const INCOMES = ['5万以下', '5-10万', '10-20万', '20-50万', '50万以上'];
 
@@ -34,9 +41,7 @@ function Section({ title, children }) {
 export default function GuestForm({ guest, onClose }) {
   const init = guest ? {
     ...BLANK, ...guest,
-    audit_flags: guest.audit_flags
-      ? (typeof guest.audit_flags === 'string' ? JSON.parse(guest.audit_flags) : guest.audit_flags)
-      : BLANK.audit_flags,
+    audit_flags: parseFlags(guest.audit_flags),
   } : BLANK;
 
   const [form, setForm] = useState(init);

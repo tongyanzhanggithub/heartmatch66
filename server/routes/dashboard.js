@@ -56,7 +56,9 @@ router.get('/', (req, res) => {
 
   // 复购率：到场过 ≥2 场的嘉宾 / 到场过 ≥1 场的嘉宾
   const attendCounts = db.prepare(`
-    SELECT guest_id, COUNT(*) as n FROM registrations WHERE attended = 1 GROUP BY guest_id
+    SELECT r.guest_id, COUNT(*) as n FROM registrations r
+    JOIN guests g ON r.guest_id = g.id
+    WHERE r.attended = 1 AND g.deleted = 0 GROUP BY r.guest_id
   `).all();
   const attendedOnce = attendCounts.length;
   const attendedRepeat = attendCounts.filter(r => r.n >= 2).length;

@@ -39,27 +39,42 @@ function countWuXing(ec) {
 }
 
 function buildBazi(guest) {
-  // 优先用完整生日；只有出生年时降级
+  // 优先用完整生日；脏数据（格式不合法）或只有出生年时降级
   let solar, precision;
-  if (guest.birth_date) {
-    const [y, m, d] = guest.birth_date.split('-').map(Number);
-    let hour = 12, minute = 0;
-    const exact = guest.birth_time && guest.birth_time.match(/^(\d{1,2}):(\d{2})$/);
-    if (exact) {
-      // 精确时间 HH:mm，时柱最准
-      hour = parseInt(exact[1]); minute = parseInt(exact[2]);
-    } else if (guest.birth_time && SHICHEN[guest.birth_time] !== undefined) {
-      hour = SHICHEN[guest.birth_time];
-    } else if (guest.birth_time && /^\d{1,2}/.test(guest.birth_time)) {
-      hour = parseInt(guest.birth_time);
+  const rawDate = guest.birth_date ? String(guest.birth_date).trim() : '';
+  const validDate = /^\d{4}-\d{1,2}-\d{1,2}$/.test(rawDate);
+  // 兜底年份：优先 birth_year，缺失时尝试从（哪怕脏的）birth_date 抠出 4 位年份
+  const yearMatch = rawDate.match(/^(\d{4})/);
+  const fallbackYear = guest.birth_year || (yearMatch ? parseInt(yearMatch[1]) : null);
+
+  try {
+    if (validDate) {
+      const [y, m, d] = rawDate.split('-').map(Number);
+      let hour = 12, minute = 0;
+      const exact = guest.birth_time && guest.birth_time.match(/^(\d{1,2}):(\d{2})$/);
+      if (exact) {
+        // 精确时间 HH:mm，时柱最准
+        hour = parseInt(exact[1]); minute = parseInt(exact[2]);
+      } else if (guest.birth_time && SHICHEN[guest.birth_time] !== undefined) {
+        hour = SHICHEN[guest.birth_time];
+      } else if (guest.birth_time && /^\d{1,2}/.test(guest.birth_time)) {
+        hour = parseInt(guest.birth_time);
+      }
+      solar = Solar.fromYmdHms(y, m, d, hour, minute, 0);
+      precision = guest.birth_time ? 'full' : 'date';
+    } else if (fallbackYear) {
+      solar = Solar.fromYmdHms(fallbackYear, 6, 15, 12, 0, 0);
+      precision = 'year';
+    } else {
+      return null;
     }
-    solar = Solar.fromYmdHms(y, m, d, hour, minute, 0);
-    precision = guest.birth_time ? 'full' : 'date';
-  } else if (guest.birth_year) {
-    solar = Solar.fromYmdHms(guest.birth_year, 6, 15, 12, 0, 0);
-    precision = 'year';
-  } else {
-    return null;
+  } catch {
+    // 排盘失败（脏数据）：尽量按年份兜底，仍失败则放弃
+    if (!fallbackYear) return null;
+    try {
+      solar = Solar.fromYmdHms(fallbackYear, 6, 15, 12, 0, 0);
+      precision = 'year';
+    } catch { return null; }
   }
 
   const lunar = solar.getLunar();
@@ -70,7 +85,7 @@ function buildBazi(guest) {
 
   return {
     precision, // full=有时辰 date=有日期 year=仅年份
-    solar_date: guest.birth_date || String(guest.birth_year),
+    solar_date: precision === 'year' ? String(fallbackYear) : rawDate,
     lunar_date: precision !== 'year' ? `${lunar.getYearInChinese()}年${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}` : null,
     pillars: {
       year: ec.getYear(), month: precision !== 'year' ? ec.getMonth() : null,

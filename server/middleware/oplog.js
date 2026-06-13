@@ -63,6 +63,37 @@ function describe(req) {
     return null;
   }
 
+  // 牵线
+  if (p.startsWith('/api/introductions')) {
+    if (method === 'POST') return ['新建牵线', `嘉宾#${body.guest_a} × 嘉宾#${body.guest_b}`];
+    if (method === 'PUT') return ['更新牵线', `牵线#${id}${body.status ? ` → ${body.status}` : ''}`];
+    if (method === 'DELETE') return ['删除牵线', `牵线#${id}`];
+    return null;
+  }
+
+  // 跟进
+  if (p.startsWith('/api/followups')) {
+    if (method === 'POST') return ['添加跟进', `${body.target_type === 'intro' ? '牵线' : '嘉宾'}#${body.target_id}`];
+    if (method === 'PUT') return ['更新跟进', `跟进#${id}${body.done ? '（标记完成）' : ''}`];
+    if (method === 'DELETE') return ['删除跟进', `跟进#${id}`];
+    return null;
+  }
+
+  // 报表导出
+  if (p.startsWith('/api/reports')) {
+    if (p.includes('/event/')) return ['导出活动报名表', `活动#${id}`];
+    if (p.includes('/finance')) return ['导出财务月报', `格式 ${req.query.format || 'xlsx'}`];
+    return null;
+  }
+
+  // 成功案例
+  if (p.startsWith('/api/cases')) {
+    if (method === 'POST') return ['新增成功案例', body.title || `牵线#${body.introduction_id || '?'}`];
+    if (method === 'PUT') return ['修改成功案例', `案例#${id}`];
+    if (method === 'DELETE') return ['删除成功案例', `案例#${id}`];
+    return null;
+  }
+
   return null;
 }
 
