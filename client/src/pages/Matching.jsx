@@ -125,7 +125,7 @@ function MatchCard({ item, seekerName, seekerId, seeker }) {
           )}
           {(item.mbti.a || item.mbti.b) && (
             <p className="text-xs text-gray-400">
-              MBTI 参考：{item.mbti.a || '未填'} × {item.mbti.b || '未填'}（性格类型仅供聊天参考，不计入评分）
+              MBTI 参考：{item.mbti.a || '未填'} × {item.mbti.b || '未填'}（已计入共性维度，仅作轻量参考）
             </p>
           )}
           <div className="flex justify-end items-center gap-2">

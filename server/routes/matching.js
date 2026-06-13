@@ -6,11 +6,20 @@ const db = require('../db');
  * - 双向评分：A对B的满意度 × B对A的满意度，取调和平均（惩罚单边匹配）
  * - 硬性条件：带孩/同城等结构化冲突直接排除；dealbreakers 文本标红警告
  * - 缺失维度剔除：双方信息不全的维度不计分，按已评估维度归一化，并报告覆盖率
- * - 共性维度：标签交集、恋爱意向一致性；MBTI 仅作参考展示不计分
+ * - 共性维度：性格/生活/价值观/运动标签交集、恋爱意向、家庭计划、约会偏好、兴趣关键词、MBTI 轻量契合、异地接受度
  */
 
 const EDU_ORDER = ['高中及以下', '大专', '本科', '硕士', '博士'];
 const INCOME_ORDER = ['5万以下', '5-10万', '10-20万', '20-50万', '50万以上'];
+
+// MBTI 经典"黄金互补"组合（每个类型的常见理想搭配）
+const MBTI_GOLDEN = {
+  INTJ: 'ENFP', ENFP: 'INTJ', INFJ: 'ENTP', ENTP: 'INFJ', INFP: 'ENFJ', ENFJ: 'INFP',
+  INTP: 'ENTJ', ENTJ: 'INTP', ISTJ: 'ESFP', ESFP: 'ISTJ', ISFJ: 'ESTP', ESTP: 'ISFJ',
+  ISTP: 'ESFJ', ESFJ: 'ISTP', ISFP: 'ESTJ', ESTJ: 'ISFP',
+};
+// 自由文本分词（兴趣等）：按常见分隔符切，去空
+const splitTokens = s => String(s || '').split(/[,，、/\s·]+/).map(x => x.trim()).filter(Boolean);
 
 const age = g => (g.birth_year ? new Date().getFullYear() - g.birth_year : null);
 
@@ -153,7 +162,7 @@ function commonalityScore(a, b) {
   let sum = 0, count = 0;
 
   // 标签交集（三类）
-  for (const [field, label] of [['lifestyle_tags', '生活方式'], ['value_tags', '价值观'], ['sport_tags', '运动偏好']]) {
+  for (const [field, label] of [['personality_tags', '性格'], ['lifestyle_tags', '生活方式'], ['value_tags', '价值观'], ['sport_tags', '运动偏好']]) {
     const o = tagOverlap(a, b, field);
     if (!o) continue;
     const score = Math.round(Math.min(o.ratio * 1.4, 1) * 100);
@@ -190,6 +199,54 @@ function commonalityScore(a, b) {
     items.push({
       label: '家庭计划', score,
       note: conflict ? `「${a.family_plan}」vs「${b.family_plan}」——重大分歧，务必提前确认` : `${a.family_plan} / ${b.family_plan}`,
+    });
+  }
+
+  // 约会方式偏好（单选，相同加分）
+  if (a.preferred_date && b.preferred_date) {
+    const same = a.preferred_date === b.preferred_date;
+    const score = same ? 100 : 50;
+    sum += score; count++;
+    items.push({
+      label: '约会偏好', score,
+      note: same ? `都喜欢「${a.preferred_date}」` : `「${a.preferred_date}」/「${b.preferred_date}」，可互相尝试`,
+    });
+  }
+
+  // MBTI 契合（轻量参考：黄金互补 > 同类型 > 按相通维度数）
+  if (a.mbti && b.mbti && /^[EI][NS][TF][JP]$/.test(a.mbti) && /^[EI][NS][TF][JP]$/.test(b.mbti)) {
+    let score, note;
+    if (MBTI_GOLDEN[a.mbti] === b.mbti) { score = 100; note = `${a.mbti} × ${b.mbti}，MBTI 黄金互补组合`; }
+    else if (a.mbti === b.mbti) { score = 75; note = `同为 ${a.mbti}，相处默契`; }
+    else {
+      let shared = 0;
+      for (let i = 0; i < 4; i++) if (a.mbti[i] === b.mbti[i]) shared++;
+      score = 40 + shared * 10;
+      note = `${a.mbti} × ${b.mbti}，${shared} 个性格维度相通`;
+    }
+    sum += score; count++;
+    items.push({ label: 'MBTI 契合', score, note });
+  }
+
+  // 兴趣爱好关键词重合（自由文本，含包含关系的宽松匹配）
+  const ia = splitTokens(a.interests), ib = splitTokens(b.interests);
+  if (ia.length && ib.length) {
+    const common = [...new Set(ia.filter(t => ib.some(u => u === t || u.includes(t) || t.includes(u))))];
+    const score = common.length ? Math.min(100, 55 + common.length * 20) : 40;
+    sum += score; count++;
+    items.push({ label: '兴趣', score, note: common.length ? `共同兴趣：${common.join('、')}` : '兴趣无明显重合' });
+  }
+
+  // 异地接受度（仅当一方外地、一方本地，构成异地时才评估）
+  const longDistance = (a.district === '外地') !== (b.district === '外地');
+  if (longDistance && (a.accept_long_distance || b.accept_long_distance)) {
+    const reject = a.accept_long_distance === '不接受' || b.accept_long_distance === '不接受';
+    const cautious = a.accept_long_distance === '看情况' || b.accept_long_distance === '看情况';
+    const score = reject ? 10 : cautious ? 55 : 100;
+    sum += score; count++;
+    items.push({
+      label: '异地接受度', score,
+      note: reject ? '两人异地，且一方明确不接受异地' : cautious ? '两人异地，一方态度「看情况」，需提前沟通' : '两人异地，但双方接受异地',
     });
   }
 
