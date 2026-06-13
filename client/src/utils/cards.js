@@ -353,18 +353,29 @@ export function generateHepanCard(report) {
 // item: matchPair 结果（含 guest/score/a_to_b/b_to_a/commonality/red_flags）；seeker: 发起匹配的嘉宾
 export function generateMatchCard(item, seeker) {
   const cand = item.guest;
-  const W = 750, H = 1220;
+  const W = 750;
+  const year = new Date().getFullYear();
+
+  // 先算匹配亮点（双向明细+共性里分数最高的，去重），据此自适应卡片高度（消除下方空白）
+  const pool = [...item.a_to_b.details, ...item.b_to_a.details, ...(item.commonality?.items || [])]
+    .filter(d => d.score >= 70).sort((a, b) => b.score - a.score);
+  const seen = new Set(), top = [];
+  for (const h of pool) { if (seen.has(h.label)) continue; seen.add(h.label); top.push(h); if (top.length >= 5) break; }
+  const nBars = 2 + (item.commonality && item.commonality.pct != null ? 1 : 0);
+  const barsEnd = 540 + nBars * 54;          // 双向条结束 y
+  const hiFirst = barsEnd + 38;              // 亮点首行 y
+  const H = Math.round(hiFirst + Math.max(top.length, 1) * 33 + 64);
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const year = new Date().getFullYear();
 
   // 背景：紫粉渐变
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#f5f3ff'); bg.addColorStop(0.5, '#faf5ff'); bg.addColorStop(1, '#fce7f3');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   softCircle(ctx, 90, 120, 220, 'rgba(168,85,247,0.15)');
-  softCircle(ctx, W - 70, H - 200, 260, 'rgba(236,72,153,0.13)');
+  softCircle(ctx, W - 70, H - 150, 240, 'rgba(236,72,153,0.13)');
   softCircle(ctx, W - 110, 90, 120, 'rgba(99,102,241,0.16)');
 
   ctx.textAlign = 'center';
@@ -374,7 +385,7 @@ export function generateMatchCard(item, seeker) {
 
   // 白卡
   ctx.save();
-  roundRect(ctx, 45, 125, W - 90, H - 220, 34);
+  roundRect(ctx, 45, 125, W - 90, H - 160, 34);
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.shadowColor = 'rgba(124,58,237,0.18)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
   ctx.fill();
@@ -430,20 +441,14 @@ export function generateMatchCard(item, seeker) {
   bar(`${seeker.nickname} 符合 Ta 的期望`, item.b_to_a.pct);
   if (item.commonality && item.commonality.pct != null) bar('双方共性契合', item.commonality.pct);
 
-  // 匹配亮点（取双向明细 + 共性里分数最高的，去重）
-  const pool = [
-    ...item.a_to_b.details, ...item.b_to_a.details, ...(item.commonality?.items || []),
-  ].filter(d => d.score >= 70).sort((a, b) => b.score - a.score);
-  const seen = new Set(), top = [];
-  for (const h of pool) { if (seen.has(h.label)) continue; seen.add(h.label); top.push(h); if (top.length >= 5) break; }
-
+  // 匹配亮点（top 已在开头算好，此处只绘制）
   y += 4;
   ctx.textAlign = 'left'; ctx.fillStyle = '#7c3aed'; ctx.font = `bold 25px ${FONT}`;
   ctx.fillText('✨ 匹配亮点', 90, y); y += 34;
   ctx.font = `21px ${FONT}`;
   if (top.length === 0) {
     ctx.fillStyle = '#9ca3af';
-    ctx.fillText('资料完善后可呈现更多匹配亮点', 90, y); y += 32;
+    ctx.fillText('双方资料完善后，匹配亮点会更丰富～', 90, y);
   } else {
     for (const h of top) {
       ctx.fillStyle = '#ec4899'; ctx.fillText('●', 90, y);
@@ -457,28 +462,11 @@ export function generateMatchCard(item, seeker) {
     }
   }
 
-  // 红旗提醒
-  if (item.red_flags && item.red_flags.length) {
-    y += 10;
-    const boxH = 38 + item.red_flags.length * 28;
-    roundRect(ctx, 80, y - 24, W - 160, boxH, 14); ctx.fillStyle = '#fef2f2'; ctx.fill();
-    ctx.fillStyle = '#dc2626'; ctx.font = `bold 21px ${FONT}`;
-    ctx.textAlign = 'left'; ctx.fillText('⚠️ 需人工确认', 100, y); y += 30;
-    ctx.font = `19px ${FONT}`; ctx.fillStyle = '#b91c1c';
-    for (const f of item.red_flags) {
-      let line = `${f.who}的底线：${f.text}`;
-      const full = line;
-      while (ctx.measureText(line).width > W - 230 && line.length > 4) line = line.slice(0, -1);
-      if (line.length < full.length) line += '…';
-      ctx.fillText(line, 100, y); y += 28;
-    }
-  }
-
-  // 底部
+  // 底部（对客户展示，不含任何内部预警/底线信息）
   ctx.textAlign = 'center';
   ctx.fillStyle = '#9ca3af';
   ctx.font = `20px ${FONT}`;
-  ctx.fillText('半日相知 · AI 双向匹配 · 仅供红娘参考', W / 2, H - 45);
+  ctx.fillText('半日相知 · AI 智能双向匹配 💞', W / 2, H - 38);
 
   download(canvas, `匹配卡_${seeker.nickname}x${cand.nickname}.png`);
 }
