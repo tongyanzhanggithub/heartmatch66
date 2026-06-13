@@ -1,7 +1,14 @@
-# 把 your-domain.com 改成你的真实域名（部署前务必先把该域名的 DNS A 记录指向本服务器公网 IP）
-# Caddy 会自动为该域名申请并续期 Let's Encrypt 证书，全站走 HTTPS
-your-domain.com {
+# 【当前：HTTP 明文过渡方案】Caddy 监听 80，反代到 app:3001，浏览器访问 http://服务器公网IP
+# ⚠️ 明文传输：嘉宾填的身份证后四位/微信/照片在网络上不加密，仅适合临时测试，
+#    请勿长期对外收真实报名。尽快切换到下方的 HTTPS 方案。
+:80 {
     encode gzip
-    # 反代到 compose 网络内的 app 服务（后台 / 、报名页 /apply/ 、接口 /api 都在 3001 同源提供）
     reverse_proxy app:3001
 }
+
+# 【以后上 HTTPS】拿到域名（含免费 DuckDNS 子域名）后，把上面整段换成下面这样、改成你的域名，
+# 然后 `docker compose restart caddy` 即可自动签发受信任证书，无需改 docker-compose：
+# your-domain.com {
+#     encode gzip
+#     reverse_proxy app:3001
+# }
