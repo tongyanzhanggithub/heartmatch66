@@ -1,0 +1,7 @@
+# 把 your-domain.com 改成你的真实域名（部署前务必先把该域名的 DNS A 记录指向本服务器公网 IP）
+# Caddy 会自动为该域名申请并续期 Let's Encrypt 证书，全站走 HTTPS
+your-domain.com {
+    encode gzip
+    # 反代到 compose 网络内的 app 服务（后台 / 、报名页 /apply/ 、接口 /api 都在 3001 同源提供）
+    reverse_proxy app:3001
+}

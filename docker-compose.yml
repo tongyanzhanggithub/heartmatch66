@@ -4,8 +4,9 @@ services:
   app:
     build: .
     restart: unless-stopped
+    # 只监听本机回环，不对公网裸暴露；公网访问统一走下面的 Caddy(443)
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -22,3 +23,21 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # HTTPS 反向代理：自动申请/续期 Let's Encrypt 证书，公网入口
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:
