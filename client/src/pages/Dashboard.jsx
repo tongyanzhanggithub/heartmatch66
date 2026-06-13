@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import api from '../api';
-import { Users, CalendarDays, TrendingUp, Clock, AlertCircle } from 'lucide-react';
+import { Users, CalendarDays, TrendingUp, Clock, AlertCircle, Repeat } from 'lucide-react';
+
+const PIE_COLORS = ['#e07b54', '#e9a23b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#6366f1', '#14b8a6', '#a3a3a3'];
 
 function StatCard({ icon: Icon, label, value, sub, color = 'primary' }) {
   const colors = {
@@ -77,7 +79,7 @@ export default function Dashboard() {
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip formatter={v => `¥${v?.toFixed(0)}`} />
-                <Bar dataKey="net_profit" fill="#ec4899" radius={[4,4,0,0]} name="净利润" />
+                <Bar dataKey="net_profit" fill="#e07b54" radius={[4,4,0,0]} name="净利润" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -92,6 +94,59 @@ export default function Dashboard() {
                 <Line dataKey="attend_rate" stroke="#3b82f6" strokeWidth={2} dot name="到场率" />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* 运营分析：来源渠道 / 年龄分布 / 复购 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {data.sourceChannels?.length > 0 && (
+          <div className="card">
+            <h3 className="font-semibold text-gray-800 mb-2">嘉宾来源渠道</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={data.sourceChannels} dataKey="count" nameKey="channel"
+                  cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                  {data.sourceChannels.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v, name) => [`${v} 人`, name]} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {data.ageDistribution?.length > 0 && (
+          <div className="card">
+            <h3 className="font-semibold text-gray-800 mb-2">库内嘉宾年龄分布</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={data.ageDistribution}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                <Tooltip formatter={v => `${v} 人`} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="male" fill="#3b82f6" radius={[4,4,0,0]} name="男" />
+                <Bar dataKey="female" fill="#ec4899" radius={[4,4,0,0]} name="女" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {data.repeatStats?.repeatRate !== null && data.repeatStats?.attendedOnce > 0 && (
+        <div className="card flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-50 text-purple-600">
+            <Repeat size={22} />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{data.repeatStats.repeatRate}%</p>
+            <p className="text-sm text-gray-500">复购率（到场 2 场以上嘉宾占比）</p>
+            <p className="text-xs text-gray-400">
+              到场过活动的 {data.repeatStats.attendedOnce} 人中，有 {data.repeatStats.attendedRepeat} 人参加了 2 场及以上
+            </p>
           </div>
         </div>
       )}

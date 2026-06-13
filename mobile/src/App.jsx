@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -56,25 +56,25 @@ const BLANK = {
   birth_place:'', work_type:'', school:'', mbti:'', intention:'',
   relationship_value:'', lifestyle_desc:'', family_plan:'', preferred_date:'',
   dealbreakers:'', personality_tags:'', sport_tags:'', lifestyle_tags:'',
-  value_tags:'', qa_answers:'', same_city_only:'',
+  value_tags:'', qa_answers:'', same_city_only:'', photos:'',
 };
 
 // ─── small UI atoms ──────────────────────────────────────────
 function Label({ children, required }) {
-  return <label className="block text-sm font-medium text-gray-700 mb-1.5">{children}{required && <span className="text-pink-500 ml-0.5">*</span>}</label>;
+  return <label className="block text-sm font-medium text-gray-700 mb-1.5">{children}{required && <span className="text-primary-500 ml-0.5">*</span>}</label>;
 }
 function Input(props) {
-  return <input className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent bg-white" {...props} />;
+  return <input className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent bg-white" {...props} />;
 }
 function Select({ children, ...props }) {
   return (
-    <select className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white appearance-none" {...props}>
+    <select className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white appearance-none" {...props}>
       {children}
     </select>
   );
 }
 function Textarea(props) {
-  return <textarea className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none bg-white" rows={4} {...props} />;
+  return <textarea className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none bg-white" rows={4} {...props} />;
 }
 function Field({ label, required, hint, children }) {
   return (
@@ -122,7 +122,7 @@ function ChipGroup({ options, value, onChange, allowCustom = true }) {
         <button key={opt} type="button" onClick={() => onChange(opt === value ? '' : opt)}
           className={`px-3.5 py-2 rounded-full text-sm border transition-all ${
             value === opt
-              ? 'border-pink-400 bg-pink-50 text-pink-700 font-medium'
+              ? 'border-primary-400 bg-primary-50 text-primary-700 font-medium'
               : 'border-gray-200 text-gray-600 bg-white'
           }`}>
           {opt}
@@ -130,7 +130,7 @@ function ChipGroup({ options, value, onChange, allowCustom = true }) {
       ))}
       {isCustomValue && (
         <button type="button" onClick={() => onChange('')}
-          className="px-3.5 py-2 rounded-full text-sm border border-pink-400 bg-pink-50 text-pink-700 font-medium">
+          className="px-3.5 py-2 rounded-full text-sm border border-primary-400 bg-primary-50 text-primary-700 font-medium">
           ✓ {value} ×
         </button>
       )}
@@ -142,12 +142,12 @@ function ChipGroup({ options, value, onChange, allowCustom = true }) {
       )}
       {editing && (
         <span className="inline-flex gap-1.5 items-center">
-          <input autoFocus className="px-3 py-2 border border-pink-300 rounded-full text-sm w-32 focus:outline-none focus:ring-2 focus:ring-pink-200"
+          <input autoFocus className="px-3 py-2 border border-primary-300 rounded-full text-sm w-32 focus:outline-none focus:ring-2 focus:ring-primary-200"
             placeholder="输入后确认" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && submitCustom()} />
           <button type="button" onClick={submitCustom}
-            className="px-3 py-2 rounded-full text-sm bg-pink-500 text-white">确认</button>
+            className="px-3 py-2 rounded-full text-sm bg-primary-500 text-white">确认</button>
         </span>
       )}
     </div>
@@ -179,7 +179,7 @@ function MultiChipGroup({ options, value, onChange, allowCustom = true }) {
         <button key={opt} type="button" onClick={() => toggle(opt)}
           className={`px-3.5 py-2 rounded-full text-sm border transition-all ${
             selected.includes(opt)
-              ? 'border-pink-400 bg-pink-50 text-pink-700 font-medium'
+              ? 'border-primary-400 bg-primary-50 text-primary-700 font-medium'
               : 'border-gray-200 text-gray-600 bg-white'
           }`}>
           {selected.includes(opt) ? '✓ ' : ''}{opt}
@@ -187,7 +187,7 @@ function MultiChipGroup({ options, value, onChange, allowCustom = true }) {
       ))}
       {customSelected.map(t => (
         <button key={t} type="button" onClick={() => toggle(t)}
-          className="px-3.5 py-2 rounded-full text-sm border border-pink-400 bg-pink-50 text-pink-700 font-medium">
+          className="px-3.5 py-2 rounded-full text-sm border border-primary-400 bg-primary-50 text-primary-700 font-medium">
           ✓ {t} ×
         </button>
       ))}
@@ -199,14 +199,71 @@ function MultiChipGroup({ options, value, onChange, allowCustom = true }) {
       )}
       {editing && (
         <span className="inline-flex gap-1.5 items-center">
-          <input autoFocus className="px-3 py-2 border border-pink-300 rounded-full text-sm w-32 focus:outline-none focus:ring-2 focus:ring-pink-200"
+          <input autoFocus className="px-3 py-2 border border-primary-300 rounded-full text-sm w-32 focus:outline-none focus:ring-2 focus:ring-primary-200"
             placeholder="输入标签" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCustom()} />
           <button type="button" onClick={addCustom}
-            className="px-3 py-2 rounded-full text-sm bg-pink-500 text-white">添加</button>
+            className="px-3 py-2 rounded-full text-sm bg-primary-500 text-white">添加</button>
         </span>
       )}
+    </div>
+  );
+}
+
+// 照片上传（最多3张，选填）：上传后回传文件名，提交时随表单入库
+function PhotoUpload({ value, onChange }) {
+  const inputRef = useRef();
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState('');
+  let photos = [];
+  try { photos = value ? JSON.parse(value) : []; } catch { /* ignore */ }
+
+  async function handleFiles(e) {
+    const files = Array.from(e.target.files || []).slice(0, 3 - photos.length);
+    e.target.value = '';
+    if (!files.length) return;
+    setUploading(true);
+    setErr('');
+    try {
+      const added = [];
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('photo', file);
+        const { data } = await axios.post(`${API}/public/photo`, fd);
+        added.push(data.filename);
+      }
+      onChange(JSON.stringify([...photos, ...added]));
+    } catch (e2) {
+      setErr(e2.response?.data?.error || '上传失败，请重试');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-3">
+        {photos.map(name => (
+          <div key={name} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200">
+            <img src={`/uploads/${name}`} alt="" className="w-full h-full object-cover" />
+            <button type="button"
+              onClick={() => onChange(JSON.stringify(photos.filter(p => p !== name)))}
+              className="absolute top-1 right-1 w-6 h-6 bg-black/50 text-white rounded-full text-sm leading-none">
+              ×
+            </button>
+          </div>
+        ))}
+        {photos.length < 3 && (
+          <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
+            className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 active:border-primary-300 disabled:opacity-50">
+            <span className="text-2xl">📷</span>
+            <span className="text-xs mt-1">{uploading ? '上传中...' : '添加照片'}</span>
+          </button>
+        )}
+      </div>
+      {err && <p className="text-xs text-red-500 mt-1.5">{err}</p>}
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={handleFiles} />
     </div>
   );
 }
@@ -346,6 +403,9 @@ function Step3({ form, set }) {
   return (
     <>
       <p className="text-sm text-gray-400 mb-5">让对方更了解你，填写越详细匹配越准确 ✨</p>
+      <Field label="形象照（选填，最多 3 张）" hint="清晰生活照即可，仅工作人员审核与匹配参考，未经授权不对外展示">
+        <PhotoUpload value={form.photos} onChange={v => set('photos', v)} />
+      </Field>
       <Field label="一句话介绍自己" hint="会展示在你的嘉宾卡片上，如：慢热但真诚，喜欢简单的小确幸～">
         <Input maxLength={50} placeholder="用一句话打动对方" value={form.one_liner} onChange={e => set('one_liner', e.target.value)} />
       </Field>
@@ -453,40 +513,40 @@ function Step5({ form, set }) {
       {/* 承诺与授权（合规三件套） */}
       <p className="text-sm font-semibold text-gray-700 mt-6 mb-3">📋 承诺与授权</p>
       <div className="space-y-3">
-        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.single_promise ? 'border-pink-400 bg-pink-50' : 'border-gray-200 bg-white'}`}>
+        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.single_promise ? 'border-primary-400 bg-primary-50' : 'border-gray-200 bg-white'}`}>
           <input type="checkbox" checked={form.single_promise}
             onChange={e => set('single_promise', e.target.checked)}
-            className="mt-0.5 w-5 h-5 accent-pink-500 shrink-0" />
+            className="mt-0.5 w-5 h-5 accent-primary-500 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-gray-800">单身承诺书 <span className="text-pink-500">*</span></p>
+            <p className="text-sm font-semibold text-gray-800">单身承诺书 <span className="text-primary-500">*</span></p>
             <p className="text-xs text-gray-500 mt-1">本人承诺目前为单身状态（未婚/离异/丧偶），不存在合法有效婚姻关系；所提供信息真实、准确、有效，无虚假、隐瞒或冒用他人身份；参加活动出于真实婚恋交友目的。如违反承诺，主办方有权取消资格、不退费用并列入黑名单，造成损失由本人承担全部法律责任。</p>
           </div>
         </label>
 
-        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.agree_disclaimer ? 'border-pink-400 bg-pink-50' : 'border-gray-200 bg-white'}`}>
+        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.agree_disclaimer ? 'border-primary-400 bg-primary-50' : 'border-gray-200 bg-white'}`}>
           <input type="checkbox" checked={form.agree_disclaimer}
             onChange={e => set('agree_disclaimer', e.target.checked)}
-            className="mt-0.5 w-5 h-5 accent-pink-500 shrink-0" />
+            className="mt-0.5 w-5 h-5 accent-primary-500 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-gray-800">活动参与免责协议 <span className="text-pink-500">*</span></p>
+            <p className="text-sm font-semibold text-gray-800">活动参与免责协议 <span className="text-primary-500">*</span></p>
             <p className="text-xs text-gray-500 mt-1">本人自愿报名参加活动；知悉主办方仅提供组织与撮合服务，不对建立恋爱婚姻关系作保证；活动场所外或私下交往发生的纠纷由当事人自行承担；警惕以交友为名的诈骗，不向其他参与人转账借款。</p>
           </div>
         </label>
 
-        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.display_consent ? 'border-pink-400 bg-pink-50' : 'border-gray-200 bg-white'}`}>
+        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.display_consent ? 'border-primary-400 bg-primary-50' : 'border-gray-200 bg-white'}`}>
           <input type="checkbox" checked={form.display_consent}
             onChange={e => set('display_consent', e.target.checked)}
-            className="mt-0.5 w-5 h-5 accent-pink-500 shrink-0" />
+            className="mt-0.5 w-5 h-5 accent-primary-500 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-gray-800">同意脱敏展示（选勾）</p>
             <p className="text-xs text-gray-500 mt-1">同意主办方以脱敏方式（如「92年·渝中·教师」，不含真实姓名联系方式）展示我的基本资料，用于活动预热与匹配。可随时撤回。</p>
           </div>
         </label>
 
-        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.portrait_consent ? 'border-pink-400 bg-pink-50' : 'border-gray-200 bg-white'}`}>
+        <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${form.portrait_consent ? 'border-primary-400 bg-primary-50' : 'border-gray-200 bg-white'}`}>
           <input type="checkbox" checked={form.portrait_consent}
             onChange={e => set('portrait_consent', e.target.checked)}
-            className="mt-0.5 w-5 h-5 accent-pink-500 shrink-0" />
+            className="mt-0.5 w-5 h-5 accent-primary-500 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-gray-800">肖像与案例授权（选勾）</p>
             <p className="text-xs text-gray-500 mt-1">同意主办方在征得我确认后，将活动照片、脱单成功案例（匿名化处理）用于公众号、短视频等宣传。未勾选则不使用。</p>
@@ -504,10 +564,10 @@ function Step5({ form, set }) {
 // ─── Success screen ──────────────────────────────────────────
 function SuccessScreen() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-cream to-primary-100 flex items-center justify-center p-6">
       <div className="text-center max-w-sm">
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-          <span className="text-5xl">💝</span>
+          <span className="text-5xl">🌅</span>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-3">已提交审核！</h2>
         <p className="text-gray-600 mb-2">您的资料已提交，工作人员核验后即入库</p>
@@ -520,6 +580,7 @@ function SuccessScreen() {
             <li>✅ 活动名额有限，优质嘉宾优先安排</li>
           </ul>
         </div>
+        <p className="text-xs text-gray-400 mt-6">半日相知 · 用半日时间，遇见真正聊得来的人</p>
       </div>
     </div>
   );
@@ -532,8 +593,17 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [applyEvent, setApplyEvent] = useState(null); // 扫码进入时的目标活动
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  useEffect(() => {
+    const eventId = new URLSearchParams(window.location.search).get('event');
+    if (!eventId) return;
+    axios.get(`${API}/public/event/${eventId}`)
+      .then(({ data }) => { if (data.open) setApplyEvent(data); })
+      .catch(() => { /* 活动无效则按普通报名处理 */ });
+  }, []);
 
   function validate() {
     if (step === 0) {
@@ -568,7 +638,7 @@ export default function App() {
     setSubmitting(true);
     setError('');
     try {
-      await axios.post(`${API}/public/submit`, form);
+      await axios.post(`${API}/public/submit`, { ...form, apply_event_id: applyEvent?.id || null });
       setDone(true);
     } catch (err) {
       setError(err.response?.data?.error || '提交失败，请重试');
@@ -584,7 +654,7 @@ export default function App() {
   const canSkip = step === 2 || step === 3 || step === 4;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-cream flex flex-col">
       {/* Header */}
       <div className="bg-white sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -600,7 +670,7 @@ export default function App() {
               <span className="text-xs text-gray-400">{step + 1} / {STEPS.length}</span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-300"
+              <div className="h-full bg-gradient-to-r from-sunray to-primary-500 rounded-full transition-all duration-300"
                 style={{ width: `${pct}%` }} />
             </div>
           </div>
@@ -608,7 +678,7 @@ export default function App() {
 
         <div className="flex gap-1 justify-center pb-3">
           {STEPS.map((s, i) => (
-            <div key={i} className={`h-1.5 rounded-full transition-all ${i === step ? 'w-6 bg-pink-500' : i < step ? 'w-1.5 bg-pink-300' : 'w-1.5 bg-gray-200'}`} />
+            <div key={i} className={`h-1.5 rounded-full transition-all ${i === step ? 'w-6 bg-primary-500' : i < step ? 'w-1.5 bg-primary-300' : 'w-1.5 bg-gray-200'}`} />
           ))}
         </div>
       </div>
@@ -622,9 +692,10 @@ export default function App() {
           </div>
         )}
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-2xl">💕</span>
-          <h1 className="text-xl font-bold text-gray-900">嘉宾报名</h1>
+          <img src="/apply/favicon.svg" alt="半日相知" className="w-8 h-8 rounded-lg" />
+          <h1 className="text-xl font-bold text-gray-800 tracking-wider">半日相知</h1>
         </div>
+        <p className="text-xs text-gray-400 mb-1">用半日时间，遇见真正聊得来的人</p>
         <p className="text-sm text-gray-400">
           {['填写您的基本信息', '职业背景与个人条件', '您的性格与生活方式', '让对方先了解您', '您期望的另一半是什么样的', '承诺声明与联系方式'][step]}
         </p>
@@ -648,7 +719,7 @@ export default function App() {
           </div>
         )}
         <button onClick={next} disabled={submitting}
-          className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-base rounded-2xl shadow-md active:scale-95 transition-transform disabled:opacity-60">
+          className="w-full py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold text-base rounded-2xl shadow-md active:scale-95 transition-transform disabled:opacity-60">
           {submitting ? '提交中...' : step === STEPS.length - 1 ? '提交审核 ✅' : '下一步 →'}
         </button>
         {canSkip && (

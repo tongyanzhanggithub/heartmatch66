@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const db = require('../db');
+const { photoUpload, sanitizePhotos } = require('../upload');
 
-// IP 限流：每个 IP 每小时最多提交 10 次（防脚本刷库）
+// IP 限流：每个 IP 每小时最多提交 10 次（防脚本刷库）；照片上传单独计数，最多 30 张/时
 const ipHits = new Map();
 const WINDOW_MS = 60 * 60 * 1000, MAX_PER_WINDOW = 10;
 setInterval(() => {
@@ -9,20 +10,61 @@ setInterval(() => {
   for (const [ip, rec] of ipHits) if (now - rec.start > WINDOW_MS) ipHits.delete(ip);
 }, 10 * 60 * 1000);
 
-// 公开报名接口，无需登录，提交后状态为「待审」
-router.post('/submit', (req, res) => {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
-  const rec = ipHits.get(ip);
+function clientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+}
+
+function rateLimit(key, max) {
+  const rec = ipHits.get(key);
   if (rec && Date.now() - rec.start < WINDOW_MS) {
-    if (rec.count >= MAX_PER_WINDOW) {
-      return res.status(429).json({ error: '提交过于频繁，请稍后再试' });
-    }
+    if (rec.count >= max) return false;
     rec.count++;
   } else {
-    ipHits.set(ip, { start: Date.now(), count: 1 });
+    ipHits.set(key, { start: Date.now(), count: 1 });
+  }
+  return true;
+}
+
+// 报名页照片上传（无需登录），返回文件名供提交时回传
+router.post('/photo', (req, res) => {
+  if (!rateLimit(`photo:${clientIp(req)}`, 30)) {
+    return res.status(429).json({ error: '上传过于频繁，请稍后再试' });
+  }
+  photoUpload.single('photo')(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message || '上传失败' });
+    if (!req.file) return res.status(400).json({ error: '未收到图片文件' });
+    res.json({ filename: req.file.filename, url: `/uploads/${req.file.filename}` });
+  });
+});
+
+// 活动公开信息（扫码报名页展示用），只暴露非敏感字段
+router.get('/event/:id', (req, res) => {
+  const e = db.prepare(`
+    SELECT id, title, circle_type, date_time, location, status, price_male, price_female
+    FROM events WHERE id = ? AND deleted = 0
+  `).get(req.params.id);
+  if (!e) return res.status(404).json({ error: '活动不存在' });
+  res.json({ ...e, open: e.status === '报名中' });
+});
+
+// 公开报名接口，无需登录，提交后状态为「待审」
+router.post('/submit', (req, res) => {
+  if (!rateLimit(clientIp(req), MAX_PER_WINDOW)) {
+    return res.status(429).json({ error: '提交过于频繁，请稍后再试' });
   }
 
   const b = req.body;
+  // 照片只接受本系统上传生成的文件名，最多 3 张
+  b.photos = sanitizePhotos(b.photos) || null;
+
+  // 扫码报名：仅记录真实存在且「报名中」的活动，无效则忽略不阻断报名
+  const applyEventId = parseInt(b.apply_event_id, 10);
+  b.apply_event_id = null;
+  if (Number.isInteger(applyEventId) && applyEventId > 0) {
+    const ev = db.prepare("SELECT id FROM events WHERE id = ? AND deleted = 0 AND status = '报名中'")
+      .get(applyEventId);
+    if (ev) b.apply_event_id = ev.id;
+  }
 
   // 字段长度上限，防止超长内容塞库
   for (const [k, v] of Object.entries(b)) {
@@ -64,7 +106,7 @@ router.post('/submit', (req, res) => {
     'source_channel', 'interested_events', 'birth_date', 'birth_time', 'birth_place',
     'work_type', 'school', 'mbti', 'intention', 'relationship_value', 'lifestyle_desc',
     'family_plan', 'preferred_date', 'dealbreakers', 'personality_tags', 'sport_tags',
-    'lifestyle_tags', 'value_tags', 'qa_answers', 'same_city_only',
+    'lifestyle_tags', 'value_tags', 'qa_answers', 'same_city_only', 'photos', 'apply_event_id',
   ];
 
   // 从完整生日自动推出出生年份

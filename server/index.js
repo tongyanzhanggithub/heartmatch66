@@ -34,6 +34,13 @@ app.use('/api/matching', auth, matchingRoutes);
 app.use('/api/guests-io', auth, oplog, require('./routes/importExport'));
 app.use('/api/fortune', auth, require('./routes/fortune'));
 app.use('/api/oplogs', auth, require('./routes/oplogs'));
+app.use('/api/accounts', auth, require('./routes/accounts'));
+app.use('/api/members', auth, oplog, require('./routes/members'));
+app.use('/api/uploads', auth, require('./routes/uploads'));
+
+// 嘉宾照片：随机文件名不可猜测，缓存 7 天
+const { UPLOAD_DIR } = require('./upload');
+app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d', immutable: true }));
 
 // Serve frontends in production
 // 注意：Express 5 不再支持 app.get('*') 通配符，改用兜底中间件实现 SPA fallback

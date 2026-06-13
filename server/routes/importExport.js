@@ -42,6 +42,7 @@ const FIELD_MAP = [
   ['个性标签', 'personality_tags'],
   ['运动偏好', 'sport_tags'],
   ['生活方式标签', 'lifestyle_tags'],
+  ['生活习惯描述', 'lifestyle_desc'],
   ['价值观标签', 'value_tags'],
   ['快问快答', 'qa_answers'],
   ['期望年龄最小', 'pref_age_min'],
@@ -62,6 +63,8 @@ const FIELD_MAP = [
   ['感兴趣的专场', 'interested_events'],
   ['来源渠道', 'source_channel'],
   ['审核状态', 'audit_status'],
+  ['核验项目', 'audit_flags'],
+  ['照片', 'photos'],
   ['单身承诺', 'single_promise'],
   ['免责协议', 'agree_disclaimer'],
   ['脱敏展示授权', 'display_consent'],
@@ -77,6 +80,18 @@ const FIELD_MAP = [
 const CN2DB = Object.fromEntries(FIELD_MAP.map(([cn, dbf]) => [cn, dbf]));
 const BOOL_FIELDS = ['single_promise', 'agree_disclaimer', 'display_consent', 'portrait_consent', 'blacklisted'];
 const INT_FIELDS = ['birth_year', 'height', 'pref_age_min', 'pref_age_max', 'pref_height_min', 'pref_height_max'];
+
+// 核验项目：JSON {real_name,id_card,single_promise} ↔ 可读的「实名,证件,单身承诺」
+const FLAG_LABELS = [['real_name', '实名'], ['id_card', '证件'], ['single_promise', '单身承诺']];
+function flagsToText(json) {
+  let f = {};
+  try { f = JSON.parse(json || '{}'); } catch { /* 忽略脏数据 */ }
+  return FLAG_LABELS.filter(([k]) => f[k]).map(([, label]) => label).join(',');
+}
+function textToFlags(text) {
+  const parts = String(text).split(/[,，、\s]+/);
+  return JSON.stringify(Object.fromEntries(FLAG_LABELS.map(([k, label]) => [k, parts.includes(label)])));
+}
 
 // ── 导出 ───────────────────────────────────────────
 // GET /api/guests-io/export?format=xlsx|csv&audit_status=通过
@@ -95,6 +110,7 @@ router.get('/export', (req, res) => {
     for (const [cn, dbf] of FIELD_MAP) {
       let v = r[dbf];
       if (BOOL_FIELDS.includes(dbf)) v = v ? '是' : '否';
+      if (dbf === 'audit_flags') v = flagsToText(v);
       out[cn] = v ?? '';
     }
     return out;
@@ -174,6 +190,12 @@ router.post('/import', upload.single('file'), (req, res) => {
         if (v === '') continue;
         if (BOOL_FIELDS.includes(dbf)) v = (v === '是' || v === '1' || v === 1 || v === true) ? 1 : 0;
         if (INT_FIELDS.includes(dbf)) { v = parseInt(v); if (isNaN(v)) continue; }
+        if (dbf === 'audit_flags') v = textToFlags(v);
+        if (dbf === 'photos') {
+          const clean = require('../upload').sanitizePhotos(v);
+          if (!clean || clean === '[]') continue;
+          v = clean;
+        }
         rec[dbf] = v;
       }
 

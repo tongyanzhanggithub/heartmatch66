@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCheck, CalendarDays, LogOut, Heart, Sparkles, Tag, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, CalendarDays, LogOut, Heart, Sparkles, Tag, ScrollText, UserCog, KeyRound, BadgeCheck } from 'lucide-react';
 import api from '../api';
 
 const nav = [
@@ -8,15 +8,61 @@ const nav = [
   { to: '/audit', icon: UserCheck, label: '嘉宾审核', badge: true },
   { to: '/guests', icon: Users, label: '嘉宾管理', sub: '库内嘉宾（已通过）' },
   { to: '/tags', icon: Tag, label: '标签分群', sub: '按标签/圈层看人' },
+  { to: '/members', icon: BadgeCheck, label: '会员名单', sub: '缴费会员管理' },
   { to: '/events', icon: CalendarDays, label: '活动管理' },
   { to: '/guests', icon: Sparkles, label: 'AI 智能匹配', sub: '在嘉宾列表点击匹配', dim: true },
   { to: '/hepan', icon: Heart, label: '八字合盘', sub: '缘分测算 · 星座契合' },
   { to: '/oplogs', icon: ScrollText, label: '操作记录', sub: '账号操作审计', adminOnly: true },
+  { to: '/accounts', icon: UserCog, label: '账号管理', sub: '子账号与密码', adminOnly: true },
 ];
+
+function ChangePasswordModal({ onClose }) {
+  const [form, setForm] = useState({ old_password: '', new_password: '', confirm: '' });
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (form.new_password !== form.confirm) return setError('两次输入的新密码不一致');
+    setSaving(true);
+    try {
+      await api.put('/accounts/me/password', {
+        old_password: form.old_password,
+        new_password: form.new_password,
+      });
+      alert('✅ 密码已修改，下次登录请使用新密码');
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || '修改失败');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <form onSubmit={submit} className="bg-white rounded-xl p-6 w-80 space-y-3 shadow-xl" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold text-gray-800 flex items-center gap-2"><KeyRound size={16} /> 修改密码</h3>
+        <input type="password" className="input text-sm" placeholder="旧密码" required
+          value={form.old_password} onChange={e => setForm(f => ({ ...f, old_password: e.target.value }))} />
+        <input type="password" className="input text-sm" placeholder="新密码（至少 8 位）" required minLength={8}
+          value={form.new_password} onChange={e => setForm(f => ({ ...f, new_password: e.target.value }))} />
+        <input type="password" className="input text-sm" placeholder="再次输入新密码" required
+          value={form.confirm} onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))} />
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <div className="flex gap-2 justify-end">
+          <button type="button" className="btn-secondary text-sm" onClick={onClose}>取消</button>
+          <button type="submit" className="btn-primary text-sm" disabled={saving}>{saving ? '保存中...' : '确认修改'}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 export default function Layout() {
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
+  const [showPwd, setShowPwd] = useState(false);
 
   async function loadPending() {
     try {
@@ -39,12 +85,15 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-cream">
       {/* Sidebar */}
       <aside className="w-56 bg-white border-r border-gray-100 flex flex-col fixed h-full z-10 shadow-sm">
-        <div className="flex items-center gap-2 px-5 py-5 border-b border-gray-100">
-          <Heart className="text-primary-600" size={22} fill="currentColor" />
-          <span className="font-bold text-gray-800 text-base leading-tight">相亲活动<br/>管理后台</span>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-gray-100">
+          <img src="/favicon.svg" alt="半日相知" className="w-9 h-9 rounded-lg shrink-0" />
+          <div className="leading-tight">
+            <span className="font-bold text-gray-800 text-lg tracking-wide">半日相知</span>
+            <p className="text-[11px] text-gray-400 mt-0.5">遇见真正聊得来的人</p>
+          </div>
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1">
           {nav.filter(item => !item.adminOnly || localStorage.getItem('username') === 'admin')
@@ -71,7 +120,11 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="p-3 border-t border-gray-100">
+        <div className="p-3 border-t border-gray-100 space-y-0.5">
+          <button onClick={() => setShowPwd(true)}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-500 hover:text-primary-600 rounded-lg hover:bg-primary-50 transition-colors">
+            <KeyRound size={16} /> 修改密码
+          </button>
           <button onClick={logout}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors">
             <LogOut size={16} /> 退出登录
@@ -85,6 +138,8 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      {showPwd && <ChangePasswordModal onClose={() => setShowPwd(false)} />}
     </div>
   );
 }

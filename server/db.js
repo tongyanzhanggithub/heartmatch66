@@ -82,6 +82,24 @@ db.exec(`
     UNIQUE(event_id, guest_id)
   );
 
+  CREATE TABLE IF NOT EXISTS members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guest_id INTEGER NOT NULL UNIQUE REFERENCES guests(id),
+    level TEXT DEFAULT '普通会员',
+    start_date TEXT,
+    expire_date TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS member_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    amount REAL NOT NULL DEFAULT 0,
+    paid_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    note TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS op_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
@@ -174,6 +192,10 @@ const newGuestCols = [
   ['birth_place', 'TEXT'],
   // 红娘自定义标签（管理后台打标）
   ['admin_tags', 'TEXT'],
+  // 嘉宾照片（JSON 数组，存 uploads/ 下的文件名）
+  ['photos', 'TEXT'],
+  // 扫码报名来源活动：审核通过时自动加入该活动报名
+  ['apply_event_id', 'INTEGER'],
 ];
 for (const [col, type] of newGuestCols) {
   if (!guestCols.includes(col)) {

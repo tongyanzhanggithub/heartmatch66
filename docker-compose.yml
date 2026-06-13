@@ -15,6 +15,7 @@ services:
     volumes:
       - ./data:/app/server/data
       - ./backups:/app/server/backups
+      - ./uploads:/app/server/uploads
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/dashboard',r=>process.exit(r.statusCode===401?0:1))"]
       interval: 30s

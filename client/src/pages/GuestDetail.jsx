@@ -186,6 +186,24 @@ export default function GuestDetail() {
         </div>
       )}
 
+      {(() => {
+        let photos = [];
+        try { photos = guest.photos ? JSON.parse(guest.photos) : []; } catch { /* 忽略脏数据 */ }
+        return photos.length > 0 && (
+          <div className="card">
+            <h3 className="font-semibold text-gray-900 mb-3">📷 照片</h3>
+            <div className="flex flex-wrap gap-3">
+              {photos.map(name => (
+                <a key={name} href={`/uploads/${name}`} target="_blank" rel="noreferrer"
+                  className="block w-28 h-28 rounded-xl overflow-hidden border border-gray-200 hover:ring-2 hover:ring-primary-300 transition-shadow">
+                  <img src={`/uploads/${name}`} alt="" className="w-full h-full object-cover" />
+                </a>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900">基本信息</h3>

@@ -183,7 +183,7 @@ export function generateGuestCard(guest) {
   ctx.fillText('💌 想认识 TA？私信红娘报名', cx, H - 130);
   ctx.fillStyle = '#9ca3af';
   ctx.font = `22px ${FONT}`;
-  ctx.fillText('资料已脱敏 · 本人已授权展示 · 信息经平台核验', cx, H - 80);
+  ctx.fillText('半日相知 · 资料已脱敏 · 本人已授权展示 · 信息经平台核验', cx, H - 80);
 
   download(canvas, `嘉宾卡_${guest.nickname}.png`);
 }
@@ -340,7 +340,7 @@ export function generateHepanCard(report) {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#9ca3af';
   ctx.font = `22px ${FONT}`;
-  ctx.fillText('仅供娱乐参考 · 感情幸福靠经营 💕', W / 2, H - 60);
+  ctx.fillText('半日相知 · 仅供娱乐参考 · 感情幸福靠经营 💕', W / 2, H - 60);
 
   download(canvas, `合盘_${report.a.nickname}x${report.b.nickname}.png`);
 }

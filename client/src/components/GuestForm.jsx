@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../api';
 import { X } from 'lucide-react';
+import PhotoUploader from './PhotoUploader';
 
 const CIRCLES = ['体制内', '教师', '医护', '金融', '互联网', '法律', '艺术传媒', '创业', '其他'];
 const EDUCATIONS = ['高中及以下', '大专', '本科', '硕士', '博士'];
@@ -148,6 +149,11 @@ export default function GuestForm({ guest, onClose }) {
                 <input className="input" value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="微信号" />
               </div>
             </div>
+          </Section>
+
+          {/* 照片 */}
+          <Section title="照片（最多 3 张）">
+            <PhotoUploader value={form.photos} onChange={v => set('photos', v)} />
           </Section>
 
           {/* 自我介绍 */}

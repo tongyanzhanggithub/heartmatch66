@@ -48,6 +48,15 @@ function describe(req) {
     return null;
   }
 
+  // 会员
+  if (p.startsWith('/api/members')) {
+    if (p.includes('/payments')) return ['会员缴费', `会员#${id} 缴费 ¥${body.amount}${body.note ? `（${body.note}）` : ''}`];
+    if (method === 'POST') return ['添加会员', `嘉宾#${body.guest_id} → ${body.level || '普通会员'}${body.fee ? `，缴费 ¥${body.fee}` : ''}`];
+    if (method === 'PUT') return ['修改会员信息', `会员#${id}`];
+    if (method === 'DELETE') return ['移除会员', `会员#${id}`];
+    return null;
+  }
+
   // 复盘
   if (p.startsWith('/api/reviews')) {
     if (method === 'POST') return ['保存复盘', `活动#${(p.match(/event\/(\d+)/) || [])[1]}`];

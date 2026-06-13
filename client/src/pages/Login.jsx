@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Heart } from 'lucide-react';
 
 export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -26,14 +25,13 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-pink-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cream to-primary-100">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center mb-3">
-            <Heart className="text-primary-600" size={28} fill="currentColor" />
-          </div>
-          <h1 className="text-xl font-bold text-gray-900">相亲活动管理后台</h1>
-          <p className="text-sm text-gray-500 mt-1">请登录以继续</p>
+          <img src="/favicon.svg" alt="半日相知" className="w-16 h-16 rounded-2xl mb-3 shadow-sm" />
+          <h1 className="text-2xl font-bold text-gray-800 tracking-widest">半日相知</h1>
+          <p className="text-sm text-gray-500 mt-1.5">用半日时间，遇见真正聊得来的人</p>
+          <p className="text-xs text-gray-400 mt-0.5">管理后台</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

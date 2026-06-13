@@ -4,7 +4,8 @@ const db = require('../db');
 // List guests with filters
 router.get('/', (req, res) => {
   const { gender, circle, audit_status, marital, district, keyword, blacklisted } = req.query;
-  let sql = 'SELECT * FROM guests WHERE deleted = 0';
+  let sql = `SELECT g.*, e.title AS apply_event_title FROM guests g
+    LEFT JOIN events e ON g.apply_event_id = e.id WHERE g.deleted = 0`;
   const params = [];
 
   if (gender) { sql += ' AND gender = ?'; params.push(gender); }
@@ -18,10 +19,10 @@ router.get('/', (req, res) => {
     const searchFields = ['nickname', 'real_name', 'occupation', 'circle', 'district', 'hometown',
       'school', 'admin_tags', 'interests', 'one_liner', 'self_intro', 'notes',
       'contact', 'phone', 'education', 'work_type', 'personality_tags', 'lifestyle_tags', 'value_tags'];
-    sql += ` AND (${searchFields.map(f => `${f} LIKE ?`).join(' OR ')})`;
+    sql += ` AND (${searchFields.map(f => `g.${f} LIKE ?`).join(' OR ')})`;
     searchFields.forEach(() => params.push(`%${keyword}%`));
   }
-  sql += ' ORDER BY created_at DESC';
+  sql += ' ORDER BY g.created_at DESC';
 
   const rows = db.prepare(sql).all(...params);
   res.json(rows);
@@ -29,7 +30,11 @@ router.get('/', (req, res) => {
 
 // Get single guest
 router.get('/:id', (req, res) => {
-  const guest = db.prepare('SELECT * FROM guests WHERE id = ? AND deleted = 0').get(req.params.id);
+  const guest = db.prepare(`
+    SELECT g.*, e.title AS apply_event_title FROM guests g
+    LEFT JOIN events e ON g.apply_event_id = e.id
+    WHERE g.id = ? AND g.deleted = 0
+  `).get(req.params.id);
   if (!guest) return res.status(404).json({ error: '嘉宾不存在' });
 
   // Get participation history
@@ -92,14 +97,17 @@ router.put('/:id', (req, res) => {
     'work_type','school','mbti','intention','relationship_value','lifestyle_desc',
     'family_plan','preferred_date','dealbreakers','personality_tags','sport_tags',
     'lifestyle_tags','value_tags','qa_answers','same_city_only','admin_tags',
-    'blacklisted','blacklist_reason'];
+    'photos','blacklisted','blacklist_reason'];
 
+  const { sanitizePhotos } = require('../upload');
   const updates = [];
   const values = [];
   for (const f of fields) {
     if (req.body[f] !== undefined) {
       updates.push(`${f} = ?`);
-      values.push(f === 'audit_flags' ? JSON.stringify(req.body[f]) : req.body[f]);
+      if (f === 'audit_flags') values.push(JSON.stringify(req.body[f]));
+      else if (f === 'photos') values.push(sanitizePhotos(req.body[f]));
+      else values.push(req.body[f]);
     }
   }
   if (updates.length === 0) return res.status(400).json({ error: '无更新内容' });
@@ -111,7 +119,7 @@ router.put('/:id', (req, res) => {
 
 // 审核动作（闭环）：通过入库 / 待补 / 拒绝，记录原因和时间
 router.post('/:id/audit', (req, res) => {
-  const guest = db.prepare('SELECT id FROM guests WHERE id = ? AND deleted = 0').get(req.params.id);
+  const guest = db.prepare('SELECT * FROM guests WHERE id = ? AND deleted = 0').get(req.params.id);
   if (!guest) return res.status(404).json({ error: '嘉宾不存在' });
 
   const { decision, reason, audit_flags } = req.body;
@@ -130,7 +138,21 @@ router.post('/:id/audit', (req, res) => {
   }
   values.push(req.params.id);
   db.prepare(`UPDATE guests SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-  res.json(db.prepare('SELECT * FROM guests WHERE id = ?').get(req.params.id));
+
+  // 扫码报名的嘉宾审核通过后，自动加入来源活动的报名名单（报名仍走活动内审核）
+  let autoRegistered = null;
+  if (decision === '通过' && guest.apply_event_id && !guest.blacklisted) {
+    const ev = db.prepare('SELECT * FROM events WHERE id = ? AND deleted = 0').get(guest.apply_event_id);
+    const exists = db.prepare('SELECT id FROM registrations WHERE event_id = ? AND guest_id = ?')
+      .get(guest.apply_event_id, guest.id);
+    if (ev && !exists) {
+      db.prepare('INSERT INTO registrations (event_id, guest_id, source) VALUES (?, ?, ?)')
+        .run(ev.id, guest.id, '扫码报名');
+      autoRegistered = ev.title;
+    }
+  }
+
+  res.json({ ...db.prepare('SELECT * FROM guests WHERE id = ?').get(req.params.id), autoRegistered });
 });
 
 // 待审计数（侧边栏角标用）

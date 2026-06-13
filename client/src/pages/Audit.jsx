@@ -53,6 +53,11 @@ function AuditCard({ guest, onAction }) {
           <p className="font-semibold text-gray-900">
             {guest.nickname}
             {guest.real_name && <span className="ml-2 text-xs font-normal text-gray-400">（{guest.real_name}）</span>}
+            {guest.apply_event_title && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
+                📱 扫码报名：{guest.apply_event_title}
+              </span>
+            )}
           </p>
           <p className="text-xs text-gray-400">
             {age ? `${age}岁` : ''} {guest.district || ''} {guest.occupation || ''} {guest.circle ? `· ${guest.circle}` : ''}
@@ -74,6 +79,22 @@ function AuditCard({ guest, onAction }) {
       {/* Expanded details */}
       {expanded && (
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+          {/* 照片 */}
+          {(() => {
+            let photos = [];
+            try { photos = guest.photos ? JSON.parse(guest.photos) : []; } catch { /* ignore */ }
+            return photos.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {photos.map(name => (
+                  <a key={name} href={`/uploads/${name}`} target="_blank" rel="noreferrer"
+                    className="block w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
+                    <img src={`/uploads/${name}`} alt="" className="w-full h-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* 基本与条件 */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
             <InfoItem label="出生日期" value={guest.birth_date || guest.birth_year} />
@@ -231,9 +252,11 @@ export default function Audit() {
 
   async function handleAction(id, decision, reason, flags) {
     try {
-      await api.post(`/guests/${id}/audit`, { decision, reason, audit_flags: flags });
+      const { data } = await api.post(`/guests/${id}/audit`, { decision, reason, audit_flags: flags });
       setToast(
-        decision === '通过' ? '✅ 已通过，嘉宾进入嘉宾库'
+        decision === '通过' ? (data.autoRegistered
+          ? `✅ 已通过，并自动加入「${data.autoRegistered}」报名名单`
+          : '✅ 已通过，嘉宾进入嘉宾库')
         : decision === '拒绝' ? '🚫 已拒绝'
         : decision === '待补' ? '📋 已标记待补材料'
         : '↩️ 已退回待审'

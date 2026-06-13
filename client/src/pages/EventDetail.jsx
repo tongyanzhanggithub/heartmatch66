@@ -2,12 +2,54 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import EventForm from '../components/EventForm';
-import { ArrowLeft, Edit, Trash2, Plus, Check, X, ClipboardList, Sparkles, UserCheck } from 'lucide-react';
+import QRCode from 'qrcode';
+import { ArrowLeft, Edit, Trash2, Plus, Check, X, ClipboardList, Sparkles, UserCheck, QrCode } from 'lucide-react';
 import AddRegistrationModal from '../components/AddRegistrationModal';
 import RecommendModal from '../components/RecommendModal';
 import CheckinMode from '../components/CheckinMode';
 
 const STATUS_COLORS = { '筹备': 'bg-gray-100 text-gray-600', '报名中': 'bg-blue-100 text-blue-700', '进行中': 'bg-green-100 text-green-700', '已结束': 'bg-gray-100 text-gray-500', '取消': 'bg-red-100 text-red-600' };
+
+// 活动专属报名二维码：嘉宾扫码 → 报名页自动关联该活动
+function QrModal({ event, onClose }) {
+  const [dataUrl, setDataUrl] = useState('');
+  const link = `${window.location.origin}/apply/?event=${event.id}`;
+
+  useEffect(() => {
+    QRCode.toDataURL(link, { width: 480, margin: 2 }).then(setDataUrl);
+  }, [link]);
+
+  function download() {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `报名二维码_${event.title}.png`;
+    a.click();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-96 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold text-gray-900 mb-1">{event.title}</h3>
+        <p className="text-xs text-gray-400 mb-3">嘉宾扫码填报名表，审核通过后自动加入本活动名单</p>
+        {dataUrl && <img src={dataUrl} alt="报名二维码" className="w-64 h-64 mx-auto rounded-lg border border-gray-100" />}
+        {event.status !== '报名中' && (
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mt-3">
+            ⚠️ 当前活动状态为「{event.status}」，扫码后不会关联本活动。请先将活动状态改为「报名中」。
+          </p>
+        )}
+        <div className="flex items-center gap-2 mt-4 bg-gray-50 rounded-lg px-3 py-2">
+          <span className="text-xs text-gray-500 truncate flex-1 text-left">{link}</span>
+          <button className="text-xs text-primary-600 shrink-0 font-medium"
+            onClick={() => { navigator.clipboard.writeText(link); alert('链接已复制'); }}>复制</button>
+        </div>
+        <div className="flex gap-2 justify-center mt-4">
+          <button className="btn-secondary text-sm" onClick={onClose}>关闭</button>
+          <button className="btn-primary text-sm" onClick={download} disabled={!dataUrl}>下载二维码</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 const REG_AUDIT_COLORS = { '待审': 'bg-amber-100 text-amber-700', '通过': 'bg-green-100 text-green-700', '拒绝': 'bg-red-100 text-red-600' };
 
 export default function EventDetail() {
@@ -18,6 +60,7 @@ export default function EventDetail() {
   const [showAddReg, setShowAddReg] = useState(false);
   const [showRecommend, setShowRecommend] = useState(false);
   const [checkinMode, setCheckinMode] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [error, setError] = useState('');
 
   async function load() {
@@ -67,6 +110,9 @@ export default function EventDetail() {
         </button>
         <button className="btn bg-purple-600 text-white hover:bg-purple-700 btn-sm" onClick={() => setShowRecommend(true)}>
           <Sparkles size={14} /> 智能荐人
+        </button>
+        <button className="btn-secondary btn-sm" onClick={() => setShowQr(true)}>
+          <QrCode size={14} /> 报名二维码
         </button>
         <button className="btn-secondary btn-sm" onClick={() => navigate(`/reviews/${id}`)}><ClipboardList size={14} /> 复盘/财务</button>
         <button className="btn-secondary" onClick={() => setEditing(true)}><Edit size={14} /> 编辑</button>
@@ -187,6 +233,7 @@ export default function EventDetail() {
       {showAddReg && <AddRegistrationModal eventId={id} onClose={() => { setShowAddReg(false); load(); }} />}
       {showRecommend && <RecommendModal eventId={id} onClose={() => { setShowRecommend(false); load(); }} />}
       {checkinMode && <CheckinMode event={event} onUpdate={load} onClose={() => setCheckinMode(false)} />}
+      {showQr && <QrModal event={event} onClose={() => setShowQr(false)} />}
     </div>
   );
 }
