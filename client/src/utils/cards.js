@@ -394,18 +394,34 @@ export function generateMatchCard(item, seeker) {
   // 双方
   const sAge = seeker.birth_year ? year - seeker.birth_year : null;
   const cAge = cand.birth_year ? year - cand.birth_year : null;
+  // 双方名字 + 心：居中成组，长昵称自动缩小字号，避免重叠或冲出卡片
+  ctx.font = '38px serif';
+  const wHeart = ctx.measureText('💞').width;
+  let nf = 44;
+  const namesW = () => { ctx.font = `bold ${nf}px ${FONT}`; return ctx.measureText(seeker.nickname).width + ctx.measureText(cand.nickname).width; };
+  while (nf > 28 && namesW() + wHeart + 48 > W - 110) nf -= 2;
+  ctx.font = `bold ${nf}px ${FONT}`;
+  const wA = ctx.measureText(seeker.nickname).width;
+  const wB = ctx.measureText(cand.nickname).width;
+  let nx = (W - (wA + 48 + wHeart + wB)) / 2;
+  ctx.textAlign = 'left';
   ctx.fillStyle = '#1f2937';
-  ctx.font = `bold 44px ${FONT}`;
-  ctx.fillText(seeker.nickname, W / 2 - 160, 205);
-  ctx.fillText(cand.nickname, W / 2 + 160, 205);
-  ctx.font = '40px serif';
-  ctx.fillText('💞', W / 2, 202);
+  ctx.fillText(seeker.nickname, nx, 205);
+  const cxA = nx + wA / 2; nx += wA + 24;
+  ctx.font = '38px serif'; ctx.fillText('💞', nx, 202); nx += wHeart + 24;
+  ctx.fillStyle = '#1f2937'; ctx.font = `bold ${nf}px ${FONT}`;
+  ctx.fillText(cand.nickname, nx, 205);
+  const cxB = nx + wB / 2;
+
+  // 资料行：各自居中于名字下方，超宽截断
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#9ca3af';
   ctx.font = `21px ${FONT}`;
-  const metaS = [sAge ? `${sAge}岁` : null, seeker.circle, seeker.education].filter(Boolean).join(' · ');
-  const metaC = [cAge ? `${cAge}岁` : null, cand.circle, cand.education].filter(Boolean).join(' · ');
-  ctx.fillText(metaS, W / 2 - 160, 240);
-  ctx.fillText(metaC, W / 2 + 160, 240);
+  const fitMeta = (s) => { let t = s; while (ctx.measureText(t).width > 290 && t.length > 1) t = t.slice(0, -1); return t === s ? s : t + '…'; };
+  const metaS = fitMeta([sAge ? `${sAge}岁` : null, seeker.circle, seeker.education].filter(Boolean).join(' · '));
+  const metaC = fitMeta([cAge ? `${cAge}岁` : null, cand.circle, cand.education].filter(Boolean).join(' · '));
+  ctx.fillText(metaS, cxA, 240);
+  ctx.fillText(metaC, cxB, 240);
 
   // 总分环
   const scx = W / 2, scy = 370;
