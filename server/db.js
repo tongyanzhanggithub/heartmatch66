@@ -242,6 +242,9 @@ const newGuestCols = [
   ['photos', 'TEXT'],
   // 扫码报名来源活动：审核通过时自动加入该活动报名
   ['apply_event_id', 'INTEGER'],
+  // 依恋类型评估（认真相亲：对亲密关系预测力强）
+  ['attachment_style', 'TEXT'],   // 安全型/焦虑型/回避型/混乱型
+  ['attachment_scores', 'TEXT'],  // JSON {anxiety, avoidance}
 ];
 for (const [col, type] of newGuestCols) {
   if (!guestCols.includes(col)) {

@@ -115,6 +115,7 @@ function AuditCard({ guest, onAction }) {
             <InfoItem label="证件后四位" value={guest.id_last4} />
             <InfoItem label="来源" value={guest.source_channel} />
             <InfoItem label="MBTI" value={guest.mbti} />
+            <InfoItem label="依恋类型" value={guest.attachment_style} />
             <InfoItem label="恋爱意向" value={guest.intention} />
             <InfoItem label="家庭计划" value={guest.family_plan} />
             <InfoItem label="约会方式" value={guest.preferred_date} />

@@ -250,6 +250,28 @@ function commonalityScore(a, b) {
     });
   }
 
+  // 依恋类型契合（认真相亲：对关系走向预测力强）
+  if (a.attachment_style && b.attachment_style) {
+    const A = a.attachment_style, B = b.attachment_style;
+    const isSecure = t => t === '安全型';
+    let score, note;
+    if (isSecure(A) && isSecure(B)) {
+      score = 100; note = '双方都是安全型，关系最稳定';
+    } else if (isSecure(A) || isSecure(B)) {
+      score = 78; note = `一方为安全型（${isSecure(A) ? a.nickname : b.nickname}），能为关系兜底`;
+    } else if ((A === '焦虑型' && B === '回避型') || (A === '回避型' && B === '焦虑型')) {
+      score = 25; note = '焦虑型 × 回避型：经典「追逃」组合，易陷入高冲突，需重点关注';
+    } else if (A === '混乱型' || B === '混乱型') {
+      score = 35; note = '含混乱型，亲密模式不稳定，建议人工深入了解';
+    } else if (A === B) {
+      score = 55; note = `同为${A}，能彼此理解，但也可能放大共同短板`;
+    } else {
+      score = 50; note = `${A} × ${B}，需要磨合`;
+    }
+    sum += score; count++;
+    items.push({ label: '依恋契合', score, note });
+  }
+
   return { pct: count > 0 ? Math.round(sum / count) : null, evaluated: count, items };
 }
 

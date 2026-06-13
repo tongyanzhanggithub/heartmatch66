@@ -288,11 +288,12 @@ export default function GuestDetail() {
       </div>
 
       {/* 性格与生活 */}
-      {(guest.mbti || guest.intention || guest.personality_tags || guest.lifestyle_tags || guest.value_tags || guest.sport_tags || guest.qa_answers) && (
+      {(guest.mbti || guest.attachment_style || guest.intention || guest.personality_tags || guest.lifestyle_tags || guest.value_tags || guest.sport_tags || guest.qa_answers) && (
         <div className="card space-y-3">
           <h3 className="font-semibold text-gray-900">性格与生活</h3>
           <div className="flex flex-wrap gap-2">
             {guest.mbti && <span className="badge bg-violet-100 text-violet-700">MBTI: {guest.mbti}</span>}
+            {guest.attachment_style && <span className="badge bg-fuchsia-100 text-fuchsia-700">🔗 依恋·{guest.attachment_style}</span>}
             {guest.intention && <span className="badge bg-rose-100 text-rose-700">💍 {guest.intention}</span>}
             {guest.family_plan && <span className="badge bg-sky-100 text-sky-700">👶 {guest.family_plan}</span>}
             {guest.preferred_date && <span className="badge bg-teal-100 text-teal-700">☕ 喜欢{guest.preferred_date}</span>}

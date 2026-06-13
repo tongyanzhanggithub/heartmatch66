@@ -45,6 +45,7 @@ const FIELD_MAP = [
   ['生活习惯描述', 'lifestyle_desc'],
   ['价值观标签', 'value_tags'],
   ['快问快答', 'qa_answers'],
+  ['依恋类型', 'attachment_style'],
   ['期望年龄最小', 'pref_age_min'],
   ['期望年龄最大', 'pref_age_max'],
   ['期望身高最低', 'pref_height_min'],
